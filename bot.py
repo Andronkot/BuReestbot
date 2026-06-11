@@ -36,6 +36,20 @@ conn.commit()
 def clean(u):
     return u.replace("@", "").strip()
 
+def get_target(update, context):
+    if update.message.reply_to_message:
+        user = update.message.reply_to_message.from_user
+
+        if user.username:
+            return user.username
+
+        return str(user.id)
+
+    if context.args:
+        return clean(context.args[0])
+
+    return None
+
 async def is_admin(update: Update):
     admins = await update.effective_chat.get_administrators()
     return any(a.user.id == update.effective_user.id for a in admins)
@@ -80,8 +94,18 @@ async def add(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await is_admin(update):
         return
 
-    uid = clean(context.args[0])
-    name = " ".join(context.args[1:])
+    uid = get_target(update, context)
+
+    if not uid:
+        await update.message.reply_text(
+            "Укажи пользователя или ответь на сообщение."
+        )
+        return
+
+    if update.message.reply_to_message:
+        reason = " ".join(context.args)
+    else:
+        reason = " ".join(context.args[1:]) if len(context.args) > 1 else ""
 
     cur.execute("INSERT OR REPLACE INTO users VALUES (?,?)", (uid, name))
     conn.commit()
@@ -131,8 +155,18 @@ async def proeb(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await is_admin(update):
         return
 
-    uid = clean(context.args[0])
-    reason = " ".join(context.args[1:]) if len(context.args) > 1 else ""
+    uid = get_target(update, context)
+
+    if not uid:
+        await update.message.reply_text(
+            "Укажи пользователя или ответь на сообщение."
+        )
+        return
+
+    if update.message.reply_to_message:
+        reason = " ".join(context.args)
+    else:
+        reason = " ".join(context.args[1:]) if len(context.args) > 1 else ""
 
     mod = f"@{update.effective_user.username}" if update.effective_user.username else str(update.effective_user.id)
 
@@ -163,18 +197,26 @@ async def unpred(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("Использование: /unpred @user [номер]")
         return
 
-    uid = clean(context.args[0])
+    uid = get_target(update, context)
+
+    if not uid:
+        await update.message.reply_text(
+            "Укажи пользователя или ответь на сообщение."
+        )
+        return
     warns = get(uid, "warn")
 
     if not warns:
         await update.message.reply_text("⚠️ У пользователя нет предупреждений")
         return
 
-    if len(context.args) == 1:
+    arg_pos = 0 if update.message.reply_to_message else 1
+
+    if len(context.args) <= arg_pos:
         vid = warns[-1][0]
     else:
         try:
-            idx = int(context.args[1]) - 1
+            idx = int(context.args[arg_pos]) - 1
 
             if idx < 0 or idx >= len(warns):
                 await update.message.reply_text("❌ Неверный номер предупреждения")
@@ -191,7 +233,7 @@ async def unpred(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         f"✅ С пользователя {uid} снято предупреждение"
     )
-    
+
 # ---------------- UNPRPROEB ----------------
 
 async def unproeb(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -202,18 +244,26 @@ async def unproeb(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("Использование: /unproeb @user [номер]")
         return
 
-    uid = clean(context.args[0])
+    uid = get_target(update, context)
+
+    if not uid:
+        await update.message.reply_text(
+            "Укажи пользователя или ответь на сообщение."
+        )
+        return
     proebs = get(uid, "proeb")
 
     if not proebs:
         await update.message.reply_text("⛔ У пользователя нет проебов")
         return
 
-    if len(context.args) == 1:
+    arg_pos = 0 if update.message.reply_to_message else 1
+
+    if len(context.args) <= arg_pos:
         vid = proebs[-1][0]
     else:
         try:
-            idx = int(context.args[1]) - 1
+            idx = int(context.args[arg_pos]) - 1
 
             if idx < 0 or idx >= len(proebs):
                 await update.message.reply_text("❌ Неверный номер проеба")
@@ -271,7 +321,13 @@ async def strong(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("Использование: /strong @user [номер]")
         return
 
-    uid = clean(context.args[0])
+    uid = get_target(update, context)
+
+    if not uid:
+        await update.message.reply_text(
+            "Укажи пользователя или ответь на сообщение."
+        )
+        return
     warns = get(uid, "warn")
 
     if not warns:
@@ -329,7 +385,7 @@ async def rename(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def ren(update: Update, context: ContextTypes.DEFAULT_TYPE):
     return await rename(update, context)
-    
+
 # ---------------- MYR ----------------
 
 async def myr(update: Update, context: ContextTypes.DEFAULT_TYPE):
