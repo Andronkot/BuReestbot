@@ -207,6 +207,7 @@ async def unpreds(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def unproebs(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await is_admin(update):
+        await update.message.reply_text("☝️Ты не админ !")
         return
 
     uid = clean(context.args[0])
@@ -218,7 +219,28 @@ async def unproebs(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"С пользователя {uid} были сняты все ⛔проебы ({cnt}/{cnt})"
     )
 
+# ---------------- RENAME ----------------
 
+async def rename(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not await is_admin(update):
+        await update.message.reply_text("☝️Ты не админ !")
+        return
+
+    if len(context.args) < 2:
+        return
+
+    uid = clean(context.args[0])
+    new_name = " ".join(context.args[1:])
+
+    cur.execute("UPDATE users SET name=? WHERE user_id=?", (new_name, uid))
+    conn.commit()
+
+    await update.message.reply_text("✏️ Переименовано")
+
+
+async def ren(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    return await rename(update, context)
+    
 # ---------------- STRONG ----------------
 
 async def strong(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -354,5 +376,7 @@ app.add_handler(CommandHandler("myr", myr))
 app.add_handler(CommandHandler("ree", ree))
 app.add_handler(CommandHandler("relist", relist))
 app.add_handler(CommandHandler("reestr", reestr))
+app.add_handler(CommandHandler("rename", rename))
+app.add_handler(CommandHandler("ren", ren))
 
 app.run_polling()
