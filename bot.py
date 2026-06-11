@@ -159,35 +159,77 @@ async def unpred(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await is_admin(update):
         return
 
+    if len(context.args) < 1:
+        await update.message.reply_text("Использование: /unpred @user [номер]")
+        return
+
     uid = clean(context.args[0])
     warns = get(uid, "warn")
 
     if not warns:
+        await update.message.reply_text("⚠️ У пользователя нет предупреждений")
         return
 
-    vid = warns[-1][0] if len(context.args) == 1 else warns[int(context.args[1]) - 1][0]
+    if len(context.args) == 1:
+        vid = warns[-1][0]
+    else:
+        try:
+            idx = int(context.args[1]) - 1
+
+            if idx < 0 or idx >= len(warns):
+                await update.message.reply_text("❌ Неверный номер предупреждения")
+                return
+
+            vid = warns[idx][0]
+
+        except ValueError:
+            await update.message.reply_text("❌ Номер должен быть числом")
+            return
 
     delete_by_id(vid)
 
-    await update.message.reply_text("")
-
+    await update.message.reply_text(
+        f"✅ С пользователя {uid} снято предупреждение"
+    )
+    
+# ---------------- UNPRPROEB ----------------
 
 async def unproeb(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await is_admin(update):
+        return
+
+    if len(context.args) < 1:
+        await update.message.reply_text("Использование: /unproeb @user [номер]")
         return
 
     uid = clean(context.args[0])
     proebs = get(uid, "proeb")
 
     if not proebs:
+        await update.message.reply_text("⛔ У пользователя нет проебов")
         return
 
-    vid = proebs[-1][0] if len(context.args) == 1 else proebs[int(context.args[1]) - 1][0]
+    if len(context.args) == 1:
+        vid = proebs[-1][0]
+    else:
+        try:
+            idx = int(context.args[1]) - 1
+
+            if idx < 0 or idx >= len(proebs):
+                await update.message.reply_text("❌ Неверный номер проеба")
+                return
+
+            vid = proebs[idx][0]
+
+        except ValueError:
+            await update.message.reply_text("❌ Номер должен быть числом")
+            return
 
     delete_by_id(vid)
 
-    await update.message.reply_text("")
-
+    await update.message.reply_text(
+        f"✅ С пользователя {uid} снят проеб"
+    )
 
 # ---------------- ALL REMOVE ----------------
 
@@ -219,6 +261,53 @@ async def unproebs(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"С пользователя {uid} были сняты все ⛔проебы ({cnt}/{cnt})"
     )
 
+# ---------------- STRONG ----------------
+
+async def strong(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not await is_admin(update):
+        return
+
+    if len(context.args) < 1:
+        await update.message.reply_text("Использование: /strong @user [номер]")
+        return
+
+    uid = clean(context.args[0])
+    warns = get(uid, "warn")
+
+    if not warns:
+        await update.message.reply_text("⚠️ У пользователя нет предупреждений")
+        return
+
+    if len(context.args) == 1:
+        idx = len(warns) - 1
+    else:
+        try:
+            idx = int(context.args[1]) - 1
+
+            if idx < 0 or idx >= len(warns):
+                await update.message.reply_text("❌ Неверный номер предупреждения")
+                return
+
+        except ValueError:
+            await update.message.reply_text("❌ Номер должен быть числом")
+            return
+
+    vid, reason = warns[idx]
+
+    delete_by_id(vid)
+
+    mod = (
+        f"@{update.effective_user.username}"
+        if update.effective_user.username
+        else str(update.effective_user.id)
+    )
+
+    add_v(uid, "proeb", reason, mod)
+
+    await update.message.reply_text(
+        f"{uid} ⚠️ Предупреждение теперь ⛔ Проеб\nНе игнорируй предупреждения !!!"
+    )
+
 # ---------------- RENAME ----------------
 
 async def rename(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -241,30 +330,6 @@ async def rename(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def ren(update: Update, context: ContextTypes.DEFAULT_TYPE):
     return await rename(update, context)
     
-# ---------------- STRONG ----------------
-
-async def strong(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if not await is_admin(update):
-        return
-
-    uid = clean(context.args[0])
-    warns = get(uid, "warn")
-
-    idx = int(context.args[1]) - 1
-
-    if idx < 0 or idx >= len(warns):
-        return
-
-    vid, reason = warns[idx]
-
-    delete_by_id(vid)
-    add_v(uid, "proeb", reason, f"@{update.effective_user.username}")
-
-    await update.message.reply_text(
-        f"{uid} ⚠️ Предупреждение теперь ⛔ Проеб\nНе игнорируй предупреждения !!!"
-    )
-
-
 # ---------------- MYR ----------------
 
 async def myr(update: Update, context: ContextTypes.DEFAULT_TYPE):
