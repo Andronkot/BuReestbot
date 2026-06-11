@@ -2,7 +2,7 @@ import os
 import sqlite3
 from datetime import datetime, timedelta
 from telegram import Update
-from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
+from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes, MessageHandler, filters
 
 TOKEN = os.getenv("TOKEN")
 
@@ -13,7 +13,8 @@ cur = conn.cursor()
 
 cur.execute("""
 CREATE TABLE IF NOT EXISTS users (
-    user_id TEXT PRIMARY KEY,
+    user_id INTEGER PRIMARY KEY,
+    username TEXT,
     name TEXT
 )
 """)
@@ -21,7 +22,7 @@ CREATE TABLE IF NOT EXISTS users (
 cur.execute("""
 CREATE TABLE IF NOT EXISTS violations (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_id TEXT,
+    user_id INTEGER,
     type TEXT,
     reason TEXT,
     created_at TEXT,
@@ -33,12 +34,23 @@ conn.commit()
 
 # ---------------- HELPERS ----------------
 
-def clean(u):
-    return u.replace("@", "").strip()
+def clean_user(u: str):
+    if not u:
+        return None
+    return str(u).replace("@", "").strip()
+
+def mod_name(update):
+    u = update.effective_user.username
+    return f"@{u}" if u else str(update.effective_user.id)
 
 async def is_admin(update: Update):
     admins = await update.effective_chat.get_administrators()
     return any(a.user.id == update.effective_user.id for a in admins)
+
+def cleanup():
+    limit = datetime.now() - timedelta(days=30)
+    cur.execute("DELETE FROM violations WHERE datetime(created_at) < ?", (limit.isoformat(),))
+    conn.commit()
 
 def add_v(uid, t, r, mod):
     cur.execute(
@@ -49,12 +61,12 @@ def add_v(uid, t, r, mod):
 
 def get(uid, t):
     cur.execute(
-        "SELECT id, reason FROM violations WHERE user_id=? AND type=? ORDER BY id ASC",
+        "SELECT id, reason, created_at FROM violations WHERE user_id=? AND type=? ORDER BY id ASC",
         (uid, t)
     )
     return cur.fetchall()
 
-def delete_by_id(i):
+def delete_id(i):
     cur.execute("DELETE FROM violations WHERE id=?", (i,))
     conn.commit()
 
@@ -62,38 +74,62 @@ def delete_all(uid, t):
     cur.execute("DELETE FROM violations WHERE user_id=? AND type=?", (uid, t))
     conn.commit()
 
-# ---------------- FORMAT ----------------
+# ---------------- TRACK USERS ----------------
 
-def fmt_warn(warns):
-    if not warns:
-        return ""
-    return "\n".join([f"{i+1}. ⚠️ {r}" for i, (_, r) in enumerate(warns)])
-
-def fmt_proeb(proebs):
-    if not proebs:
-        return ""
-    return "\n".join([f"{i+1}. ⛔ {r}" for i, (_, r) in enumerate(proebs)])
-
-# ---------------- COMMANDS ----------------
-
-async def add(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if not await is_admin(update):
+async def track(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    u = update.effective_user
+    if not u:
         return
 
-    uid = clean(context.args[0])
-    name = " ".join(context.args[1:])
+    uid = u.id
+    username = f"@{u.username}" if u.username else f"id{u.id}"
+    name = u.full_name
 
-    cur.execute("INSERT OR REPLACE INTO users VALUES (?,?)", (uid, name))
+    cur.execute(
+        "INSERT OR REPLACE INTO users VALUES (?,?,?)",
+        (uid, username, name)
+    )
     conn.commit()
 
-    await update.message.reply_text("👤 Пользователь добавлен")
+# ---------------- RESOLVE ----------------
 
+async def resolve(update, context):
+    if context.args:
+        return clean_user(context.args[0])
+
+    if update.message.reply_to_message:
+        return update.message.reply_to_message.from_user.id
+
+    return None
+
+# ---------------- ADME ----------------
+
+async def adme(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not await is_admin(update):
+        await update.message.reply_text("☝️Ты не админ !")
+        return
+
+    u = update.effective_user
+
+    uid = u.id
+    username = f"@{u.username}" if u.username else f"id{u.id}"
+    name = " ".join(context.args) if context.args else u.full_name
+
+    cur.execute("INSERT OR REPLACE INTO users VALUES (?,?,?)", (uid, username, name))
+    conn.commit()
+
+    await update.message.reply_text(f"👤 Добавлен: {username}")
+
+# ---------------- ADD / REMOVE ----------------
 
 async def delete(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await is_admin(update):
+        await update.message.reply_text("☝️Ты не админ !")
         return
 
-    uid = clean(context.args[0])
+    uid = await resolve(update, context)
+    if not uid:
+        return
 
     cur.execute("DELETE FROM users WHERE user_id=?", (uid,))
     cur.execute("DELETE FROM violations WHERE user_id=?", (uid,))
@@ -101,152 +137,133 @@ async def delete(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await update.message.reply_text("❌ Пользователь удален")
 
-
 # ---------------- PRED ----------------
 
 async def pred(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await is_admin(update):
+        await update.message.reply_text("☝️Ты не админ !")
         return
 
-    uid = clean(context.args[0])
-    reason = " ".join(context.args[1:]) if len(context.args) > 1 else ""
+    uid = await resolve(update, context)
+    if not uid:
+        return
 
-    mod = f"@{update.effective_user.username}" if update.effective_user.username else str(update.effective_user.id)
+    reason = " ".join(context.args[1:]) if len(context.args) > 1 else ""
+    mod = mod_name(update)
 
     add_v(uid, "warn", reason, mod)
 
-    text = f"""❗{uid} получает ⚠️ Предупреждение
-⏳Будет снято когда исправишься
-👺Модератор: {mod}"""
-
+    text = f"<b>❗{uid} получает ⚠️ Предупреждение</b>\n⏳Снимается после исправления\n👺Модератор: {mod}"
     if reason:
         text += f"\n💬Причина: {reason}"
 
-    await update.message.reply_text(text)
-
+    await update.message.reply_text(text, parse_mode="HTML")
 
 # ---------------- PROEB ----------------
 
 async def proeb(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await is_admin(update):
+        await update.message.reply_text("☝️Ты не админ !")
         return
 
-    uid = clean(context.args[0])
-    reason = " ".join(context.args[1:]) if len(context.args) > 1 else ""
+    uid = await resolve(update, context)
+    if not uid:
+        return
 
-    mod = f"@{update.effective_user.username}" if update.effective_user.username else str(update.effective_user.id)
+    reason = " ".join(context.args[1:]) if len(context.args) > 1 else ""
+    mod = mod_name(update)
 
     add_v(uid, "proeb", reason, mod)
 
     count = len(get(uid, "proeb"))
 
-    text = f"""❗{uid} получает ⛔ Проеб ({count}/3)
-⏳Будет снято через 30 дней
-👺Модератор: {mod}"""
-
+    text = f"<b>❗{uid} получает ⛔ Проеб ({count}/3)</b>\n⏳Снимается через 30 дней\n👺Модератор: {mod}"
     if reason:
         text += f"\n💬Причина: {reason}"
 
-    await update.message.reply_text(text)
+    await update.message.reply_text(text, parse_mode="HTML")
 
-    if count >= 3:
-        await update.message.reply_text(f"🚨 {uid} достиг максимального числа ⛔Проебов (3/3) !")
-
-
-# ---------------- UNPRED ----------------
+# ---------------- UNPRED / UNPROEB ----------------
 
 async def unpred(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await is_admin(update):
+        await update.message.reply_text("☝️Ты не админ !")
         return
 
-    uid = clean(context.args[0])
+    uid = await resolve(update, context)
     warns = get(uid, "warn")
-
     if not warns:
         return
 
-    vid = warns[-1][0] if len(context.args) == 1 else warns[int(context.args[1]) - 1][0]
-
-    delete_by_id(vid)
-
-    await update.message.reply_text("")
-
+    item = warns[-1] if len(context.args) == 1 else warns[int(context.args[1]) - 1]
+    delete_id(item[0])
 
 async def unproeb(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await is_admin(update):
+        await update.message.reply_text("☝️Ты не админ !")
         return
 
-    uid = clean(context.args[0])
+    uid = await resolve(update, context)
     proebs = get(uid, "proeb")
-
     if not proebs:
         return
 
-    vid = proebs[-1][0] if len(context.args) == 1 else proebs[int(context.args[1]) - 1][0]
+    item = proebs[-1] if len(context.args) == 1 else proebs[int(context.args[1]) - 1]
+    delete_id(item[0])
 
-    delete_by_id(vid)
-
-    await update.message.reply_text("")
-
-
-# ---------------- ALL REMOVE ----------------
+# ---------------- UN ALL ----------------
 
 async def unpreds(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await is_admin(update):
+        await update.message.reply_text("☝️Ты не админ !")
         return
 
-    uid = clean(context.args[0])
+    uid = await resolve(update, context)
     cnt = len(get(uid, "warn"))
 
     delete_all(uid, "warn")
 
-    await update.message.reply_text(
-        f"С пользователя {uid} были сняты все ⚠️предупреждения ({cnt}/{cnt})"
-    )
-
+    await update.message.reply_text(f"✅ снято ⚠️ ({cnt}/{cnt})")
 
 async def unproebs(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await is_admin(update):
+        await update.message.reply_text("☝️Ты не админ !")
         return
 
-    uid = clean(context.args[0])
+    uid = await resolve(update, context)
     cnt = len(get(uid, "proeb"))
 
     delete_all(uid, "proeb")
 
-    await update.message.reply_text(
-        f"С пользователя {uid} были сняты все ⛔проебы ({cnt}/{cnt})"
-    )
-
+    await update.message.reply_text(f"✅ снято ⛔ ({cnt}/{cnt})")
 
 # ---------------- STRONG ----------------
 
 async def strong(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await is_admin(update):
+        await update.message.reply_text("☝️Ты не админ !")
         return
 
-    uid = clean(context.args[0])
+    uid = await resolve(update, context)
     warns = get(uid, "warn")
-
-    idx = int(context.args[1]) - 1
-
-    if idx < 0 or idx >= len(warns):
+    if not warns:
         return
 
-    vid, reason = warns[idx]
+    item = warns[-1] if len(context.args) == 1 else warns[int(context.args[1]) - 1]
+    delete_id(item[0])
 
-    delete_by_id(vid)
-    add_v(uid, "proeb", reason, f"@{update.effective_user.username}")
+    add_v(uid, "proeb", item[1], mod_name(update))
 
-    await update.message.reply_text(
-        f"{uid} ⚠️ Предупреждение теперь ⛔ Проеб\nНе игнорируй предупреждения !!!"
-    )
+    await update.message.reply_text(f"<b>{uid} ⚠️ → ⛔</b>", parse_mode="HTML")
 
-
-# ---------------- MYR ----------------
+# ---------------- MYR / REE ----------------
 
 async def myr(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    uid = clean(context.args[0]) if context.args else str(update.effective_user.username)
+    uid = await resolve(update, context)
+    if not uid:
+        uid = update.effective_user.id
+
+    cleanup()
 
     warns = get(uid, "warn")
     proebs = get(uid, "proeb")
@@ -255,93 +272,101 @@ async def myr(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("Замечания отсутствуют 🤗")
         return
 
-    text = f"❕Реестр пользователя {uid}\n\n"
+    text = f"<b>❕Реестр пользователя {uid}</b>\n\n"
 
-    if proebs:
-        text += fmt_proeb(proebs) + "\n\n"
+    for i, (_, r, d) in enumerate(proebs, 1):
+        text += f"{i}. ⛔ {r}\nВыдан: {d}\n\n"
 
-    if warns:
-        text += fmt_warn(warns)
+    for i, (_, r, d) in enumerate(warns, 1):
+        text += f"{i}. ⚠️ {r}\nВыдан: {d}\n\n"
 
-    await update.message.reply_text(text)
-
-
-# ---------------- REE ----------------
+    await update.message.reply_text(text, parse_mode="HTML")
 
 async def ree(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    uid = clean(context.args[0])
-
-    warns = get(uid, "warn")
-    proebs = get(uid, "proeb")
-
-    if not warns and not proebs:
-        await update.message.reply_text("Замечания отсутствуют 🤗")
-        return
-
-    text = f"❕Реестр пользователя {uid}\n\n"
-
-    if proebs:
-        text += fmt_proeb(proebs) + "\n\n"
-
-    if warns:
-        text += fmt_warn(warns)
-
-    await update.message.reply_text(text)
-
+    return await myr(update, context)
 
 # ---------------- RELIST ----------------
 
 async def relist(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await is_admin(update):
+        await update.message.reply_text("☝️Ты не админ !")
         return
 
     cur.execute("SELECT * FROM users")
     users = cur.fetchall()
 
-    text = "📋СПИСОК УЧАСТНИКОВ📋\n\n"
+    text = "<b>📋СПИСОК УЧАСТНИКОВ📋</b>\n\n"
 
-    for uid, name in users:
-        text += f"{name} | @{uid}\n"
+    for _, uid, name in users:
+        text += f"{name} | {uid}\n"
 
-    await update.message.reply_text(text)
-
+    await update.message.reply_text(text, parse_mode="HTML")
 
 # ---------------- REESTR ----------------
 
 async def reestr(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await is_admin(update):
+        await update.message.reply_text("☝️Ты не админ !")
         return
 
     cur.execute("SELECT * FROM users")
     users = cur.fetchall()
 
-    text = "📛РЕЕСТР НАРУШЕНИЙ📛\n\n"
+    text = "<b>📛РЕЕСТР НАРУШЕНИЙ📛</b>\n\n"
 
-    for uid, name in users:
+    for _, uid, name in users:
         warns = get(uid, "warn")
         proebs = get(uid, "proeb")
 
         if not warns and not proebs:
             continue
 
-        text += f"{name} | @{uid}\n"
+        text += f"{name} | {uid}\n"
 
-        if proebs:
-            text += fmt_proeb(proebs) + "\n"
+        for _, r, _ in proebs:
+            text += f"⛔ {r}\n"
 
-        if warns:
-            text += fmt_warn(warns) + "\n"
+        for _, r, _ in warns:
+            text += f"⚠️ {r}\n"
 
         text += "\n"
 
-    await update.message.reply_text(text)
+    await update.message.reply_text(text, parse_mode="HTML")
 
+# ---------------- COMM ----------------
+
+async def comm(update: Update, context: ContextTypes.DEFAULT_TYPE):
+
+    admins = await update.effective_chat.get_administrators()
+    is_admin_user = any(a.user.id == update.effective_user.id for a in admins)
+
+    if is_admin_user:
+        text = """
+<b>📖 АДМИН КОМАНДЫ</b>
+
+👤 /add /del /relist
+⚠️ /pred /proeb /strong
+❌ /unpred /unproeb /unpreds /unproebs
+📊 /reestr /myr /ree
+⚙️ /adme /reme /ren
+"""
+    else:
+        text = """
+<b>📖 ПОЛЬЗОВАТЕЛЬ</b>
+
+👤 /adme — добавиться
+📊 /myr — мой реестр
+📊 /ree — реестр
+📖 /comm — команды
+"""
+
+    await update.message.reply_text(text, parse_mode="HTML")
 
 # ---------------- APP ----------------
 
 app = ApplicationBuilder().token(TOKEN).build()
 
-app.add_handler(CommandHandler("add", add))
+app.add_handler(CommandHandler("adme", adme))
 app.add_handler(CommandHandler("del", delete))
 app.add_handler(CommandHandler("pred", pred))
 app.add_handler(CommandHandler("proeb", proeb))
@@ -354,5 +379,8 @@ app.add_handler(CommandHandler("myr", myr))
 app.add_handler(CommandHandler("ree", ree))
 app.add_handler(CommandHandler("relist", relist))
 app.add_handler(CommandHandler("reestr", reestr))
+app.add_handler(CommandHandler("comm", comm))
+
+app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, track))
 
 app.run_polling()
