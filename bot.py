@@ -96,15 +96,27 @@ def fmt_proeb(proebs):
 
 # ---------------- TEXT COMMANDS ----------------
 
-async def text_commands(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    text = update.message.text.strip().lower()
+# ---------------- TEXT COMMANDS ----------------
 
-    if text == "мур":
+async def text_commands(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    text = update.message.text.strip()
+    lower = text.lower()
+
+    # ПРИПИСКА
+
+    if lower == "приписка":
+        return await pripiska(update, context)
+
+    # МУР
+
+    if lower == "мур":
         context.args = []
         return await myr(update, context)
 
-    if text.startswith("рее"):
-        parts = update.message.text.split(maxsplit=1)
+    # РЕЕ
+
+    if lower.startswith("рее"):
+        parts = text.split(maxsplit=1)
 
         if len(parts) > 1:
             context.args = [parts[1]]
@@ -113,13 +125,154 @@ async def text_commands(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         return await ree(update, context)
 
-    if text == "реестр":
+    # РЕЕСТР
+
+    if lower == "реестр":
         return await reestr(update, context)
 
-    if text == "релист":
+    # РЕЛИСТ
+
+    if lower == "релист":
         return await relist(update, context)
 
+    # АД
+
+    if lower.startswith("ад"):
+        parts = text.split(maxsplit=1)
+
+        if len(parts) > 1:
+            context.args = parts[1].split()
+        else:
+            context.args = []
+
+        return await add(update, context)
+
+    # ДЕЛ
+
+    if lower.startswith("дел"):
+        parts = text.split(maxsplit=1)
+
+        if len(parts) > 1:
+            context.args = parts[1].split()
+        else:
+            context.args = []
+
+        return await delete(update, context)
+
+    # ПРЕД
+
+    if lower.startswith("пред"):
+        parts = text.split(maxsplit=1)
+
+        if len(parts) > 1:
+            context.args = parts[1].split()
+        else:
+            context.args = []
+
+        return await pred(update, context)
+
+    # ПРОЕБ
+
+    if lower.startswith("проеб"):
+        parts = text.split(maxsplit=1)
+
+        if len(parts) > 1:
+            context.args = parts[1].split()
+        else:
+            context.args = []
+
+        return await proeb(update, context)
+
+    # СНЯТЬ ПРЕДЫ
+
+    if lower.startswith("снять преды"):
+        parts = text.split(maxsplit=2)
+
+        if len(parts) > 2:
+            context.args = parts[2].split()
+        else:
+            context.args = []
+
+        return await unpreds(update, context)
+
+    # СНЯТЬ ПРЕД
+
+    if lower.startswith("снять пред"):
+        parts = text.split(maxsplit=2)
+
+        if len(parts) > 2:
+            context.args = parts[2].split()
+        else:
+            context.args = []
+
+        return await unpred(update, context)
+
+    # СНЯТЬ ПРОЕБЫ
+
+    if lower.startswith("снять проебы"):
+        parts = text.split(maxsplit=2)
+
+        if len(parts) > 2:
+            context.args = parts[2].split()
+        else:
+            context.args = []
+
+        return await unproebs(update, context)
+
+    # СНЯТЬ ПРОЕБ
+
+    if lower.startswith("снять проеб"):
+        parts = text.split(maxsplit=2)
+
+        if len(parts) > 2:
+            context.args = parts[2].split()
+        else:
+            context.args = []
+
+        return await unproeb(update, context)
+
+    # СТРОНГ
+
+    if lower.startswith("стронг"):
+        parts = text.split(maxsplit=1)
+
+        if len(parts) > 1:
+            context.args = parts[1].split()
+        else:
+            context.args = []
+
+        return await strong(update, context)
+
+    # РЕНЕЙМ
+
+    if lower.startswith("ренейм"):
+        parts = text.split(maxsplit=1)
+
+        if len(parts) > 1:
+            context.args = parts[1].split()
+        else:
+            context.args = []
+
+        return await rename(update, context)
+
+    # РЕН
+
+    if lower.startswith("рен"):
+        parts = text.split(maxsplit=1)
+
+        if len(parts) > 1:
+            context.args = parts[1].split()
+        else:
+            context.args = []
+
+        return await ren(update, context)
+
 # ---------------- COMMANDS ----------------
+
+# ---------------- PRIPISKA ----------------
+
+async def pripiska(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text("『乃ｙ")
 
 # ---------------- ADD ----------------
 async def add(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -559,6 +712,7 @@ async def reestr(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 app = ApplicationBuilder().token(TOKEN).build()
 
+app.add_handler(CommandHandler("pripiska", pripiska))
 app.add_handler(CommandHandler("add", add))
 app.add_handler(CommandHandler("del", delete))
 app.add_handler(CommandHandler("pred", pred))
