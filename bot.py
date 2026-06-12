@@ -2,7 +2,13 @@ import os
 import sqlite3
 from datetime import datetime, timedelta
 from telegram import Update
-from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
+from telegram.ext import (
+    ApplicationBuilder,
+    CommandHandler,
+    ContextTypes,
+    MessageHandler,
+    filters
+)
 
 TOKEN = os.getenv("TOKEN")
 
@@ -88,7 +94,33 @@ def fmt_proeb(proebs):
         return ""
     return "\n".join([f"{i+1}. ⛔ {r}" for i, (_, r) in enumerate(proebs)])
 
+# ---------------- TEXT COMMANDS ----------------
+
+async def text_commands(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    text = update.message.text.strip().lower()
+
+    if text == "мур":
+        context.args = []
+        return await myr(update, context)
+
+    if text.startswith("рее"):
+        parts = update.message.text.split(maxsplit=1)
+
+        if len(parts) > 1:
+            context.args = [parts[1]]
+        else:
+            context.args = []
+
+        return await ree(update, context)
+
+    if text == "реестр":
+        return await reestr(update, context)
+
+    if text == "релист":
+        return await relist(update, context)
+
 # ---------------- COMMANDS ----------------
+
 # ---------------- ADD ----------------
 async def add(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await is_admin(update):
@@ -542,5 +574,12 @@ app.add_handler(CommandHandler("relist", relist))
 app.add_handler(CommandHandler("reestr", reestr))
 app.add_handler(CommandHandler("rename", rename))
 app.add_handler(CommandHandler("ren", ren))
+
+app.add_handler(
+    MessageHandler(
+        filters.TEXT & ~filters.COMMAND,
+        text_commands
+    )
+)
 
 app.run_polling()
