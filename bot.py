@@ -104,7 +104,8 @@ async def add(update: Update, context: ContextTypes.DEFAULT_TYPE):
     conn.commit()
 
     await update.message.reply_text(
-        "👤 Пользователь добавлен"
+        "<b>👤 Пользователь добавлен</b>",
+        parse_mode="HTML"
     )
 
 # ---------------- DEL ----------------
@@ -119,7 +120,10 @@ async def delete(update: Update, context: ContextTypes.DEFAULT_TYPE):
     cur.execute("DELETE FROM violations WHERE user_id=?", (uid,))
     conn.commit()
 
-    await update.message.reply_text("❌ Пользователь удален")
+    await update.message.reply_text(
+        "<b>❌ Пользователь удалён</b>",
+        parse_mode="HTML"
+    )
 
 
 # ---------------- PRED ----------------
@@ -377,7 +381,9 @@ async def strong(update: Update, context: ContextTypes.DEFAULT_TYPE):
     add_v(uid, "proeb", reason, mod)
 
     await update.message.reply_text(
-        f"{uid} ⚠️ Предупреждение теперь ⛔ Проеб\nНе игнорируй предупреждения !!!"
+        f"<b>⚠️ Предупреждение пользователя @{uid} заменено на ⛔ Проеб</b>\n\n"
+        "Не игнорируй предупреждения!",
+        parse_mode="HTML"
     )
 
 # ---------------- RENAME ----------------
@@ -396,7 +402,10 @@ async def rename(update: Update, context: ContextTypes.DEFAULT_TYPE):
     cur.execute("UPDATE users SET name=? WHERE user_id=?", (new_name, uid))
     conn.commit()
 
-    await update.message.reply_text("✏️ Переименовано")
+    await update.message.reply_text(
+        "<b>✏️ Пользователь переименован</b>",
+        parse_mode="HTML"
+    )
 
 
 async def ren(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -414,7 +423,7 @@ async def myr(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("Замечания отсутствуют 🤗")
         return
 
-    text = f"❕Реестр пользователя {uid}\n\n"
+    text = f"<b>❕ РЕЕСТР ПОЛЬЗОВАТЕЛЯ</b>\n\n👤 @{uid}\n\n"
 
     if proebs:
         text += fmt_proeb(proebs) + "\n\n"
@@ -422,13 +431,22 @@ async def myr(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if warns:
         text += fmt_warn(warns)
 
-    await update.message.reply_text(text)
+    await update.message.reply_text(
+        text,
+        parse_mode="HTML"
+    )
 
 
 # ---------------- REE ----------------
 
-async def ree(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    uid = clean(context.args[0])
+ async def ree(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    uid = get_target(update, context)
+
+    if not uid:
+        await update.message.reply_text(
+            "Укажи пользователя или ответь на сообщение."
+        )
+        return
 
     warns = get(uid, "warn")
     proebs = get(uid, "proeb")
@@ -437,7 +455,7 @@ async def ree(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("Замечания отсутствуют 🤗")
         return
 
-    text = f"❕Реестр пользователя {uid}\n\n"
+    text = f"<b>❕ РЕЕСТР ПОЛЬЗОВАТЕЛЯ</b>\n\n👤 @{uid}\n\n"
 
     if proebs:
         text += fmt_proeb(proebs) + "\n\n"
@@ -445,7 +463,10 @@ async def ree(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if warns:
         text += fmt_warn(warns)
 
-    await update.message.reply_text(text)
+    await update.message.reply_text(
+        text,
+        parse_mode="HTML"
+    )
 
 
 # ---------------- RELIST ----------------
@@ -457,12 +478,15 @@ async def relist(update: Update, context: ContextTypes.DEFAULT_TYPE):
     cur.execute("SELECT * FROM users")
     users = cur.fetchall()
 
-    text = "📋СПИСОК УЧАСТНИКОВ📋\n\n"
+    text = "<b>📋 СПИСОК УЧАСТНИКОВ 📋</b>\n\n"
 
     for uid, name in users:
         text += f"{name} | @{uid}\n"
 
-    await update.message.reply_text(text)
+    await update.message.reply_text(
+        text,
+        parse_mode="HTML"
+    )
 
 
 # ---------------- REESTR ----------------
@@ -474,7 +498,7 @@ async def reestr(update: Update, context: ContextTypes.DEFAULT_TYPE):
     cur.execute("SELECT * FROM users")
     users = cur.fetchall()
 
-    text = "📛РЕЕСТР НАРУШЕНИЙ📛\n\n"
+    text = "<b>📛 РЕЕСТР НАРУШЕНИЙ 📛</b>\n\n"
 
     for uid, name in users:
         warns = get(uid, "warn")
@@ -493,7 +517,10 @@ async def reestr(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         text += "\n"
 
-    await update.message.reply_text(text)
+    await update.message.reply_text(
+        text,
+        parse_mode="HTML"
+    )
 
 
 # ---------------- APP ----------------
