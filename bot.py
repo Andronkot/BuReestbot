@@ -89,29 +89,25 @@ def fmt_proeb(proebs):
     return "\n".join([f"{i+1}. ⛔ {r}" for i, (_, r) in enumerate(proebs)])
 
 # ---------------- COMMANDS ----------------
-
+# ---------------- ADD ----------------
 async def add(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await is_admin(update):
         return
 
-    uid = get_target(update, context)
+    uid = clean(context.args[0])
+    name = " ".join(context.args[1:])
 
-    if not uid:
-        await update.message.reply_text(
-            "Укажи пользователя или ответь на сообщение."
-        )
-        return
-
-    if update.message.reply_to_message:
-        reason = " ".join(context.args)
-    else:
-        reason = " ".join(context.args[1:]) if len(context.args) > 1 else ""
-
-    cur.execute("INSERT OR REPLACE INTO users VALUES (?,?)", (uid, name))
+    cur.execute(
+        "INSERT OR REPLACE INTO users VALUES (?,?)",
+        (uid, name)
+    )
     conn.commit()
 
-    await update.message.reply_text("👤 Пользователь добавлен")
+    await update.message.reply_text(
+        "👤 Пользователь добавлен"
+    )
 
+# ---------------- DEL ----------------
 
 async def delete(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await is_admin(update):
@@ -132,14 +128,28 @@ async def pred(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await is_admin(update):
         return
 
-    uid = clean(context.args[0])
-    reason = " ".join(context.args[1:]) if len(context.args) > 1 else ""
+    uid = get_target(update, context)
 
-    mod = f"@{update.effective_user.username}" if update.effective_user.username else str(update.effective_user.id)
+    if not uid:
+        await update.message.reply_text(
+            "Укажи пользователя или ответь на сообщение."
+        )
+        return
+
+    if update.message.reply_to_message:
+        reason = " ".join(context.args)
+    else:
+        reason = " ".join(context.args[1:]) if len(context.args) > 1 else ""
+
+    mod = (
+        f"@{update.effective_user.username}"
+        if update.effective_user.username
+        else str(update.effective_user.id)
+    )
 
     add_v(uid, "warn", reason, mod)
 
-    text = f"""❗{uid} получает ⚠️ Предупреждение
+    text = f"""❗@{uid} получает ⚠️ Предупреждение
 ⏳Будет снято когда исправишься
 👺Модератор: {mod}"""
 
@@ -193,10 +203,6 @@ async def unpred(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await is_admin(update):
         return
 
-    if len(context.args) < 1:
-        await update.message.reply_text("Использование: /unpred @user [номер]")
-        return
-
     uid = get_target(update, context)
 
     if not uid:
@@ -204,10 +210,13 @@ async def unpred(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "Укажи пользователя или ответь на сообщение."
         )
         return
+
     warns = get(uid, "warn")
 
     if not warns:
-        await update.message.reply_text("⚠️ У пользователя нет предупреждений")
+        await update.message.reply_text(
+            "⚠️ У пользователя нет предупреждений"
+        )
         return
 
     arg_pos = 0 if update.message.reply_to_message else 1
@@ -219,29 +228,29 @@ async def unpred(update: Update, context: ContextTypes.DEFAULT_TYPE):
             idx = int(context.args[arg_pos]) - 1
 
             if idx < 0 or idx >= len(warns):
-                await update.message.reply_text("❌ Неверный номер предупреждения")
+                await update.message.reply_text(
+                    "❌ Неверный номер предупреждения"
+                )
                 return
 
             vid = warns[idx][0]
 
         except ValueError:
-            await update.message.reply_text("❌ Номер должен быть числом")
+            await update.message.reply_text(
+                "❌ Номер должен быть числом"
+            )
             return
 
     delete_by_id(vid)
 
     await update.message.reply_text(
-        f"✅ С пользователя {uid} снято предупреждение"
+        f"✅ С пользователя @{uid} снято предупреждение"
     )
 
 # ---------------- UNPRPROEB ----------------
 
 async def unproeb(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await is_admin(update):
-        return
-
-    if len(context.args) < 1:
-        await update.message.reply_text("Использование: /unproeb @user [номер]")
         return
 
     uid = get_target(update, context)
@@ -251,10 +260,13 @@ async def unproeb(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "Укажи пользователя или ответь на сообщение."
         )
         return
+
     proebs = get(uid, "proeb")
 
     if not proebs:
-        await update.message.reply_text("⛔ У пользователя нет проебов")
+        await update.message.reply_text(
+            "⛔ У пользователя нет проебов"
+        )
         return
 
     arg_pos = 0 if update.message.reply_to_message else 1
@@ -266,19 +278,23 @@ async def unproeb(update: Update, context: ContextTypes.DEFAULT_TYPE):
             idx = int(context.args[arg_pos]) - 1
 
             if idx < 0 or idx >= len(proebs):
-                await update.message.reply_text("❌ Неверный номер проеба")
+                await update.message.reply_text(
+                    "❌ Неверный номер проеба"
+                )
                 return
 
             vid = proebs[idx][0]
 
         except ValueError:
-            await update.message.reply_text("❌ Номер должен быть числом")
+            await update.message.reply_text(
+                "❌ Номер должен быть числом"
+            )
             return
 
     delete_by_id(vid)
 
     await update.message.reply_text(
-        f"✅ С пользователя {uid} снят проеб"
+        f"✅ С пользователя @{uid} снят проеб"
     )
 
 # ---------------- ALL REMOVE ----------------
