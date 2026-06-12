@@ -439,7 +439,7 @@ async def myr(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 # ---------------- REE ----------------
 
- async def ree(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def ree(update: Update, context: ContextTypes.DEFAULT_TYPE):
     uid = get_target(update, context)
 
     if not uid:
