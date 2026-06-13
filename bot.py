@@ -311,6 +311,10 @@ async def text_commands(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if lower == "реестр":
         return await reestr(update, context)
 
+    # КОМ
+
+    if lower == "ком":
+        return await comm(update, context)
 
 # ---------------- COMMANDS ----------------
 
@@ -825,6 +829,102 @@ async def reestr(update: Update, context: ContextTypes.DEFAULT_TYPE):
         parse_mode="HTML"
     )
 
+# ---------------- COMM ----------------
+
+async def comm(update: Update, context: ContextTypes.DEFAULT_TYPE):
+
+    if await is_admin(update):
+
+        text = """
+<b>📋 СПИСОК КОМАНД АДМИНИСТРАТОРА</b>
+
+<code>/add</code> | Ад
+Добавить пользователя в список
+
+<code>/del</code> | Дел
+Удалить пользователя из списка
+
+<code>/rename</code> | Ренейм
+Переименовать пользователя
+
+<code>/ren</code> | Рен
+Короткая версия команды Ренейм
+
+<code>/pred</code> | Пред
+Выдать предупреждение
+
+<code>/unpred</code> | Снять пред
+Снять предупреждение
+
+<code>/unpreds</code> | Снять преды
+Снять все предупреждения
+
+<code>/proeb</code> | Проеб
+Выдать проеб
+
+<code>/unproeb</code> | Снять проеб
+Снять проеб
+
+<code>/unproebs</code> | Снять проебы
+Снять все проебы
+
+<code>/strong</code> | Стронг
+Преобразовать предупреждение в проеб
+
+<code>/relist</code> | Релист
+Показать список участников
+
+<code>/reestr</code> | Реестр
+Показать общий реестр нарушений
+
+<code>/ree</code> | Рее
+Показать реестр пользователя
+
+<code>/adme</code> | Адми
+Добавить себя в список
+
+<code>/reme</code> | Реми
+Изменить своё имя
+
+<code>/myr</code> | Мур
+Показать свой реестр
+
+<code>/pripiska</code> | Приписка
+Вывести приписку
+
+<code>/comm</code> | Ком
+Показать список команд
+"""
+
+    else:
+
+        text = """
+<b>📋 ДОСТУПНЫЕ КОМАНДЫ</b>
+
+<code>/adme</code> | Адми
+Добавить себя в список
+
+<code>/reme</code> | Реми
+Изменить своё имя
+
+<code>/myr</code> | Мур
+Показать свой реестр
+
+<code>/ree</code> | Рее
+Показать реестр пользователя
+
+<code>/pripiska</code> | Приписка
+Вывести приписку
+
+<code>/comm</code> | Ком
+Показать список команд
+"""
+
+    await update.message.reply_text(
+        text,
+        parse_mode="HTML"
+    )
+
 # ---------------- APP ----------------
 
 app = ApplicationBuilder().token(TOKEN).build()
@@ -847,6 +947,7 @@ app.add_handler(CommandHandler("myr", myr))
 app.add_handler(CommandHandler("ree", ree))
 app.add_handler(CommandHandler("relist", relist))
 app.add_handler(CommandHandler("reestr", reestr))
+app.add_handler(CommandHandler("comm", comm))
 
 app.add_handler(
     MessageHandler(
