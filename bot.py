@@ -105,34 +105,6 @@ async def text_commands(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if lower == "приписка":
         return await pripiska(update, context)
 
-    # МУР
-
-    if lower == "мур ":
-        context.args = []
-        return await myr(update, context)
-
-    # РЕЕ
-
-    if lower.startswith("рее "):
-        parts = text.split(maxsplit=1)
-
-        if len(parts) > 1:
-            context.args = [parts[1]]
-        else:
-            context.args = []
-
-        return await ree(update, context)
-
-    # РЕЕСТР
-
-    if lower == "реестр":
-        return await reestr(update, context)
-
-    # РЕЛИСТ
-
-    if lower == "релист":
-        return await relist(update, context)
-
     # АД
 
     if lower.startswith("ад "):
@@ -144,6 +116,54 @@ async def text_commands(update: Update, context: ContextTypes.DEFAULT_TYPE):
             context.args = []
 
         return await add(update, context)
+
+    # АДМИ
+
+    if lower == "адми" or lower.startswith("адми "):
+        parts = text.split(maxsplit=1)
+
+        if len(parts) > 1:
+            context.args = [parts[1]]
+        else:
+            context.args = []
+
+        return await adme(update, context)
+
+    # РЕНЕЙМ
+
+    if lower == "ренейм" or lower.startswith("ренейм "):
+        parts = text.split(maxsplit=1)
+
+        if len(parts) > 1:
+            context.args = parts[1].split()
+        else:
+            context.args = []
+
+        return await rename(update, context)
+
+    # РЕН
+
+    if lower == "рен" or lower.startswith("рен "):
+        parts = text.split(maxsplit=1)
+
+        if len(parts) > 1:
+            context.args = parts[1].split()
+        else:
+            context.args = []
+
+        return await ren(update, context)
+
+    # РЕМИ
+
+    if lower == "реми" or lower.startswith("реми "):
+        parts = text.split(maxsplit=1)
+
+        if len(parts) > 1:
+            context.args = [parts[1]]
+        else:
+            context.args = []
+
+        return await reme(update, context)
 
     # ДЕЛ
 
@@ -159,7 +179,7 @@ async def text_commands(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     # ПРЕД
 
-    if lower.startswith("пред "):
+    if lower == "пред" or lower.startswith("пред "):
         parts = text.split(maxsplit=1)
 
         if len(parts) > 1:
@@ -171,7 +191,7 @@ async def text_commands(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     # ПРОЕБ
 
-    if lower.startswith("проеб "):
+    if lower == "проеб" or lower.startswith("проеб "):
         parts = text.split(maxsplit=1)
 
         if len(parts) > 1:
@@ -183,7 +203,7 @@ async def text_commands(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     # СНЯТЬ ПРЕДЫ
 
-    if lower.startswith("снять преды"):
+    if lower == "снять преды" or lower.startswith("снять преды "):
         parts = text.split(maxsplit=2)
 
         if len(parts) > 2:
@@ -195,7 +215,7 @@ async def text_commands(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     # СНЯТЬ ПРЕД
 
-    if lower.startswith("снять пред"):
+    if lower == "снять пред" or lower.startswith("снять пред "):
         parts = text.split(maxsplit=2)
 
         if len(parts) > 2:
@@ -207,7 +227,7 @@ async def text_commands(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     # СНЯТЬ ПРОЕБЫ
 
-    if lower.startswith("снять проебы"):
+    if lower == "снять проебы" or lower.startswith("снять проебы "):
         parts = text.split(maxsplit=2)
 
         if len(parts) > 2:
@@ -219,7 +239,7 @@ async def text_commands(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     # СНЯТЬ ПРОЕБ
 
-    if lower.startswith("снять проеб"):
+    if lower == "снять проеб" or lower.startswith("снять проеб "):
         parts = text.split(maxsplit=2)
 
         if len(parts) > 2:
@@ -231,7 +251,7 @@ async def text_commands(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     # СТРОНГ
 
-    if lower.startswith("стронг "):
+    if lower == "стронг" or lower.startswith("стронг "):
         parts = text.split(maxsplit=1)
 
         if len(parts) > 1:
@@ -241,29 +261,34 @@ async def text_commands(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         return await strong(update, context)
 
-    # РЕНЕЙМ
+    # МУР
 
-    if lower.startswith("ренейм"):
+    if lower == "мур":
+        context.args = []
+        return await myr(update, context)
+
+    # РЕЕ
+
+    if lower == "рее" or lower.startswith("рее "):
         parts = text.split(maxsplit=1)
 
         if len(parts) > 1:
-            context.args = parts[1].split()
+            context.args = [parts[1]]
         else:
             context.args = []
 
-        return await rename(update, context)
+        return await ree(update, context)
 
-    # РЕН
+    # РЕЛИСТ
 
-    if lower.startswith("рен "):
-        parts = text.split(maxsplit=1)
+    if lower == "релист":
+        return await relist(update, context)
 
-        if len(parts) > 1:
-            context.args = parts[1].split()
-        else:
-            context.args = []
+    # РЕЕСТР
 
-        return await ren(update, context)
+    if lower == "реестр":
+        return await reestr(update, context)
+
 
 # ---------------- COMMANDS ----------------
 
@@ -288,6 +313,100 @@ async def add(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await update.message.reply_text(
         "<b>👤 Пользователь добавлен</b>",
+        parse_mode="HTML"
+    )
+
+# ---------------- ADME ----------------
+
+async def adme(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    uid = (
+        update.effective_user.username
+        if update.effective_user.username
+        else str(update.effective_user.id)
+    )
+
+    if not context.args:
+        await update.message.reply_text(
+            "Укажи ник.\nПример: адми Иван"
+        )
+        return
+
+    name = " ".join(context.args)
+
+    cur.execute(
+        "INSERT OR REPLACE INTO users VALUES (?, ?)",
+        (uid, name)
+    )
+    conn.commit()
+
+    await update.message.reply_text(
+        "<b>👤 Пользователь добавлен</b>",
+        parse_mode="HTML"
+    )
+
+# ---------------- RENAME ----------------
+
+async def rename(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not await is_admin(update):
+        await update.message.reply_text("☝️Ты не админ !")
+        return
+
+    if len(context.args) < 2:
+        return
+
+    uid = clean(context.args[0])
+    new_name = " ".join(context.args[1:])
+
+    cur.execute("UPDATE users SET name=? WHERE user_id=?", (new_name, uid))
+    conn.commit()
+
+    await update.message.reply_text(
+        "<b>✏️ Пользователь переименован</b>",
+        parse_mode="HTML"
+    )
+
+# ---------------- REN ----------------
+
+async def ren(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    return await rename(update, context)
+
+# ---------------- REME ----------------
+
+async def reme(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    uid = (
+        update.effective_user.username
+        if update.effective_user.username
+        else str(update.effective_user.id)
+    )
+
+    cur.execute(
+        "SELECT 1 FROM users WHERE user_id=?",
+        (uid,)
+    )
+
+    if not cur.fetchone():
+        await update.message.reply_text(
+            "Сначала добавь себя через команду Адми."
+        )
+        return
+
+    if not context.args:
+        await update.message.reply_text(
+            "Укажи новый ник.\nПример: реми Вася"
+        )
+        return
+
+    new_name = " ".join(context.args)
+
+    cur.execute(
+        "UPDATE users SET name=? WHERE user_id=?",
+        (new_name, uid)
+    )
+    conn.commit()
+
+    await update.message.reply_text(
+        f"<b>✏️ Ник изменён</b>\n\n"
+        f"Новое имя: {new_name}",
         parse_mode="HTML"
     )
 
@@ -520,10 +639,6 @@ async def strong(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await is_admin(update):
         return
 
-    if len(context.args) < 1:
-        await update.message.reply_text("Использование: /strong @user [номер]")
-        return
-
     uid = get_target(update, context)
 
     if not uid:
@@ -531,24 +646,33 @@ async def strong(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "Укажи пользователя или ответь на сообщение."
         )
         return
+
     warns = get(uid, "warn")
 
     if not warns:
-        await update.message.reply_text("⚠️ У пользователя нет предупреждений")
+        await update.message.reply_text(
+            "⚠️ У пользователя нет предупреждений"
+        )
         return
 
-    if len(context.args) == 1:
+    arg_pos = 0 if update.message.reply_to_message else 1
+
+    if len(context.args) <= arg_pos:
         idx = len(warns) - 1
     else:
         try:
-            idx = int(context.args[1]) - 1
+            idx = int(context.args[arg_pos]) - 1
 
             if idx < 0 or idx >= len(warns):
-                await update.message.reply_text("❌ Неверный номер предупреждения")
+                await update.message.reply_text(
+                    "❌ Неверный номер предупреждения"
+                )
                 return
 
         except ValueError:
-            await update.message.reply_text("❌ Номер должен быть числом")
+            await update.message.reply_text(
+                "❌ Номер должен быть числом"
+            )
             return
 
     vid, reason = warns[idx]
@@ -564,35 +688,10 @@ async def strong(update: Update, context: ContextTypes.DEFAULT_TYPE):
     add_v(uid, "proeb", reason, mod)
 
     await update.message.reply_text(
-        f"<b>⚠️ Предупреждение пользователя @{uid} заменено на ⛔ Проеб</b>\n\n"
-        "Не игнорируй предупреждения!",
-        parse_mode="HTML"
+        f"⚠️ Предупреждение пользователя @{uid} "
+        f"преобразовано в ⛔ Проеб\n"
+        f"Не игнорируй предупреждения!"
     )
-
-# ---------------- RENAME ----------------
-
-async def rename(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if not await is_admin(update):
-        await update.message.reply_text("☝️Ты не админ !")
-        return
-
-    if len(context.args) < 2:
-        return
-
-    uid = clean(context.args[0])
-    new_name = " ".join(context.args[1:])
-
-    cur.execute("UPDATE users SET name=? WHERE user_id=?", (new_name, uid))
-    conn.commit()
-
-    await update.message.reply_text(
-        "<b>✏️ Пользователь переименован</b>",
-        parse_mode="HTML"
-    )
-
-
-async def ren(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    return await rename(update, context)
 
 # ---------------- MYR ----------------
 
@@ -705,13 +804,16 @@ async def reestr(update: Update, context: ContextTypes.DEFAULT_TYPE):
         parse_mode="HTML"
     )
 
-
 # ---------------- APP ----------------
 
 app = ApplicationBuilder().token(TOKEN).build()
 
 app.add_handler(CommandHandler("pripiska", pripiska))
 app.add_handler(CommandHandler("add", add))
+app.add_handler(CommandHandler("adme", adme))
+app.add_handler(CommandHandler("rename", rename))
+app.add_handler(CommandHandler("ren", ren))
+app.add_handler(CommandHandler("reme", reme))
 app.add_handler(CommandHandler("del", delete))
 app.add_handler(CommandHandler("pred", pred))
 app.add_handler(CommandHandler("proeb", proeb))
@@ -724,8 +826,6 @@ app.add_handler(CommandHandler("myr", myr))
 app.add_handler(CommandHandler("ree", ree))
 app.add_handler(CommandHandler("relist", relist))
 app.add_handler(CommandHandler("reestr", reestr))
-app.add_handler(CommandHandler("rename", rename))
-app.add_handler(CommandHandler("ren", ren))
 
 app.add_handler(
     MessageHandler(
