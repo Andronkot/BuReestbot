@@ -125,12 +125,12 @@ async def text_commands(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     # РЕЕСТР
 
-    if lower == "реестр ":
+    if lower == "реестр":
         return await reestr(update, context)
 
     # РЕЛИСТ
 
-    if lower == "релист ":
+    if lower == "релист":
         return await relist(update, context)
 
     # АД
@@ -183,7 +183,7 @@ async def text_commands(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     # СНЯТЬ ПРЕДЫ
 
-    if lower.startswith("снять преды "):
+    if lower.startswith("снять преды"):
         parts = text.split(maxsplit=2)
 
         if len(parts) > 2:
@@ -195,7 +195,7 @@ async def text_commands(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     # СНЯТЬ ПРЕД
 
-    if lower.startswith("снять пред "):
+    if lower.startswith("снять пред"):
         parts = text.split(maxsplit=2)
 
         if len(parts) > 2:
@@ -207,7 +207,7 @@ async def text_commands(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     # СНЯТЬ ПРОЕБЫ
 
-    if lower.startswith("снять проебы "):
+    if lower.startswith("снять проебы"):
         parts = text.split(maxsplit=2)
 
         if len(parts) > 2:
@@ -219,7 +219,7 @@ async def text_commands(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     # СНЯТЬ ПРОЕБ
 
-    if lower.startswith("снять проеб "):
+    if lower.startswith("снять проеб"):
         parts = text.split(maxsplit=2)
 
         if len(parts) > 2:
@@ -243,7 +243,7 @@ async def text_commands(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     # РЕНЕЙМ
 
-    if lower.startswith("ренейм "):
+    if lower.startswith("ренейм"):
         parts = text.split(maxsplit=1)
 
         if len(parts) > 1:
