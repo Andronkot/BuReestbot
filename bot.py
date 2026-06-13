@@ -82,6 +82,28 @@ def delete_all(uid, t):
     cur.execute("DELETE FROM violations WHERE user_id=? AND type=?", (uid, t))
     conn.commit()
 
+def sort_users(users):
+    def sort_key(user):
+        uid, name = user
+
+        pos = name.find("ｙ")
+
+        if pos != -1 and pos + 1 < len(name):
+            ch = name[pos + 1]
+
+            if (
+                ("a" <= ch.lower() <= "z")
+                or
+                ("а" <= ch.lower() <= "я")
+            ):
+                return (0, ch.lower(), name.lower())
+
+            return (1, name.lower())
+
+        return (2, name.lower())
+
+    return sorted(users, key=sort_key)
+
 # ---------------- FORMAT ----------------
 
 def fmt_warn(warns):
@@ -405,8 +427,7 @@ async def reme(update: Update, context: ContextTypes.DEFAULT_TYPE):
     conn.commit()
 
     await update.message.reply_text(
-        f"<b>✏️ Ник изменён</b>\n\n"
-        f"Новое имя: {new_name}",
+        f"<b>✏️ Ник изменён</b>\n\n",
         parse_mode="HTML"
     )
 
@@ -758,7 +779,7 @@ async def relist(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     cur.execute("SELECT * FROM users")
-    users = cur.fetchall()
+    users = sort_users(cur.fetchall())
 
     text = "<b>📋 СПИСОК УЧАСТНИКОВ 📋</b>\n\n"
 
@@ -778,7 +799,7 @@ async def reestr(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     cur.execute("SELECT * FROM users")
-    users = cur.fetchall()
+    users = sort_users(cur.fetchall())
 
     text = "<b>📛 РЕЕСТР НАРУШЕНИЙ 📛</b>\n\n"
 
