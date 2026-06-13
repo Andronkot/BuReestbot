@@ -96,8 +96,6 @@ def fmt_proeb(proebs):
 
 # ---------------- TEXT COMMANDS ----------------
 
-# ---------------- TEXT COMMANDS ----------------
-
 async def text_commands(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text.strip()
     lower = text.lower()
@@ -109,13 +107,13 @@ async def text_commands(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     # МУР
 
-    if lower == "мур":
+    if lower == "мур ":
         context.args = []
         return await myr(update, context)
 
     # РЕЕ
 
-    if lower.startswith("рее"):
+    if lower.startswith("рее "):
         parts = text.split(maxsplit=1)
 
         if len(parts) > 1:
@@ -127,17 +125,17 @@ async def text_commands(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     # РЕЕСТР
 
-    if lower == "реестр":
+    if lower == "реестр ":
         return await reestr(update, context)
 
     # РЕЛИСТ
 
-    if lower == "релист":
+    if lower == "релист ":
         return await relist(update, context)
 
     # АД
 
-    if lower.startswith("ад"):
+    if lower.startswith("ад "):
         parts = text.split(maxsplit=1)
 
         if len(parts) > 1:
@@ -149,7 +147,7 @@ async def text_commands(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     # ДЕЛ
 
-    if lower.startswith("дел"):
+    if lower.startswith("дел "):
         parts = text.split(maxsplit=1)
 
         if len(parts) > 1:
@@ -161,7 +159,7 @@ async def text_commands(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     # ПРЕД
 
-    if lower.startswith("пред"):
+    if lower.startswith("пред "):
         parts = text.split(maxsplit=1)
 
         if len(parts) > 1:
@@ -173,7 +171,7 @@ async def text_commands(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     # ПРОЕБ
 
-    if lower.startswith("проеб"):
+    if lower.startswith("проеб "):
         parts = text.split(maxsplit=1)
 
         if len(parts) > 1:
@@ -185,7 +183,7 @@ async def text_commands(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     # СНЯТЬ ПРЕДЫ
 
-    if lower.startswith("снять преды"):
+    if lower.startswith("снять преды "):
         parts = text.split(maxsplit=2)
 
         if len(parts) > 2:
@@ -197,7 +195,7 @@ async def text_commands(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     # СНЯТЬ ПРЕД
 
-    if lower.startswith("снять пред"):
+    if lower.startswith("снять пред "):
         parts = text.split(maxsplit=2)
 
         if len(parts) > 2:
@@ -209,7 +207,7 @@ async def text_commands(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     # СНЯТЬ ПРОЕБЫ
 
-    if lower.startswith("снять проебы"):
+    if lower.startswith("снять проебы "):
         parts = text.split(maxsplit=2)
 
         if len(parts) > 2:
@@ -221,7 +219,7 @@ async def text_commands(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     # СНЯТЬ ПРОЕБ
 
-    if lower.startswith("снять проеб"):
+    if lower.startswith("снять проеб "):
         parts = text.split(maxsplit=2)
 
         if len(parts) > 2:
@@ -233,7 +231,7 @@ async def text_commands(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     # СТРОНГ
 
-    if lower.startswith("стронг"):
+    if lower.startswith("стронг "):
         parts = text.split(maxsplit=1)
 
         if len(parts) > 1:
@@ -245,7 +243,7 @@ async def text_commands(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     # РЕНЕЙМ
 
-    if lower.startswith("ренейм"):
+    if lower.startswith("ренейм "):
         parts = text.split(maxsplit=1)
 
         if len(parts) > 1:
@@ -257,7 +255,7 @@ async def text_commands(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     # РЕН
 
-    if lower.startswith("рен"):
+    if lower.startswith("рен "):
         parts = text.split(maxsplit=1)
 
         if len(parts) > 1:
