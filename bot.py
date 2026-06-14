@@ -60,7 +60,21 @@ async def is_admin(update: Update):
     admins = await update.effective_chat.get_administrators()
     return any(a.user.id == update.effective_user.id for a in admins)
 
+def add_v(uid, t, r, mod):
+    cur.execute(
+        "INSERT INTO violations(user_id,type,reason,created_at,moderator) VALUES (?,?,?,?,?)",
+        (uid, t, r, datetime.now().isoformat(), mod)
+    )
+    conn.commit()
+
 def get(uid, t):
+    cur.execute(
+        "SELECT id, reason FROM violations WHERE user_id=? AND type=? ORDER BY id ASC",
+        (uid, t)
+    )
+    return cur.fetchall()
+
+def get_full(uid, t):
     cur.execute(
         """
         SELECT id, reason, created_at
@@ -68,13 +82,6 @@ def get(uid, t):
         WHERE user_id=? AND type=?
         ORDER BY id ASC
         """,
-        (uid, t)
-    )
-    return cur.fetchall()
-
-def get(uid, t):
-    cur.execute(
-        "SELECT id, reason FROM violations WHERE user_id=? AND type=? ORDER BY id ASC",
         (uid, t)
     )
     return cur.fetchall()
@@ -121,36 +128,38 @@ def fmt_proeb(proebs):
         return ""
     return "\n".join([f"{i+1}. ⛔ {r}" for i, (_, r) in enumerate(proebs)])
 
-def fmt_warn_dates(warns):
+def fmt_warn_full(warns):
     if not warns:
         return ""
 
-    lines = []
+    text = ""
 
     for i, (_, reason, created_at) in enumerate(warns):
-        date = datetime.fromisoformat(created_at).strftime("%d.%m.%Y")
+        date = datetime.fromisoformat(created_at)
 
-        lines.append(
-            f"{i+1}. ⚠️ {reason}\n📅 {date}"
+        text += (
+            f"{i+1}. ⚠️ {reason}\n"
+            f"📅 {date.strftime('%d.%m.%Y')}\n\n"
         )
 
-    return "\n\n".join(lines)
+    return text
 
 
-def fmt_proeb_dates(proebs):
+def fmt_proeb_full(proebs):
     if not proebs:
         return ""
 
-    lines = []
+    text = ""
 
     for i, (_, reason, created_at) in enumerate(proebs):
-        date = datetime.fromisoformat(created_at).strftime("%d.%m.%Y")
+        date = datetime.fromisoformat(created_at)
 
-        lines.append(
-            f"{i+1}. ⛔ {reason}\n📅 {date}"
+        text += (
+            f"{i+1}. ⛔ {reason}\n"
+            f"📅 {date.strftime('%d.%m.%Y')}\n\n"
         )
 
-    return "\n\n".join(lines)
+    return text
 
 # ---------------- TEXT COMMANDS ----------------
 
@@ -389,7 +398,7 @@ async def adme(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if not context.args:
         await update.message.reply_text(
-            "Укажи ник.\nПример: адми 『乃ｙStarfly"
+            "Укажи ник.\nПример: адми Иван"
         )
         return
 
@@ -454,7 +463,7 @@ async def reme(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if not context.args:
         await update.message.reply_text(
-            "Укажи новый ник.\nПример: реми 『乃ｙStarfly"
+            "Укажи новый ник.\nПример: реми Вася"
         )
         return
 
@@ -759,8 +768,8 @@ async def strong(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def myr(update: Update, context: ContextTypes.DEFAULT_TYPE):
     uid = clean(context.args[0]) if context.args else str(update.effective_user.username)
 
-    warns = get(uid, "warn")
-    proebs = get(uid, "proeb")
+    warns = get_full(uid, "warn")
+    proebs = get_full(uid, "proeb")
 
     if not warns and not proebs:
         await update.message.reply_text("Замечания отсутствуют 🤗")
@@ -769,10 +778,10 @@ async def myr(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = f"<b>❕ РЕЕСТР ПОЛЬЗОВАТЕЛЯ</b>\n\n👤 @{uid}\n\n"
 
     if proebs:
-        text += fmt_proeb_dates(proebs) + "\n\n"
+        text += fmt_proeb_full(proebs)
 
     if warns:
-        text += fmt_warn_dates(warns)
+        text += fmt_warn_full(warns)
 
     await update.message.reply_text(
         text,
@@ -791,8 +800,8 @@ async def ree(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return
 
-    warns = get(uid, "warn")
-    proebs = get(uid, "proeb")
+    warns = get_full(uid, "warn")
+    proebs = get_full(uid, "proeb")
 
     if not warns and not proebs:
         await update.message.reply_text("Замечания отсутствуют 🤗")
@@ -801,10 +810,10 @@ async def ree(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = f"<b>❕ РЕЕСТР ПОЛЬЗОВАТЕЛЯ</b>\n\n👤 @{uid}\n\n"
 
     if proebs:
-        text += fmt_proeb_dates(proebs) + "\n\n"
+        text += fmt_proeb_full(proebs)
 
     if warns:
-        text += fmt_warn_dates(warns)
+        text += fmt_warn_full(warns)
 
     await update.message.reply_text(
         text,
@@ -1050,6 +1059,10 @@ async def comm(update: Update, context: ContextTypes.DEFAULT_TYPE):
 <b>Мур</b>
 Показать свой реестр нарушений.
 
+Пример:
+
+<code>Мур</code>
+
 ──────────────
 
 <b>Рее</b>
@@ -1067,6 +1080,10 @@ async def comm(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 <b>Приписка</b>
 Показать приписку.
+
+Пример:
+
+<code>Приписка</code>
 
 ──────────────
 
