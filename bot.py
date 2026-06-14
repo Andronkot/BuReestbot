@@ -60,12 +60,17 @@ async def is_admin(update: Update):
     admins = await update.effective_chat.get_administrators()
     return any(a.user.id == update.effective_user.id for a in admins)
 
-def add_v(uid, t, r, mod):
+def get(uid, t):
     cur.execute(
-        "INSERT INTO violations(user_id,type,reason,created_at,moderator) VALUES (?,?,?,?,?)",
-        (uid, t, r, datetime.now().isoformat(), mod)
+        """
+        SELECT id, reason, created_at
+        FROM violations
+        WHERE user_id=? AND type=?
+        ORDER BY id ASC
+        """,
+        (uid, t)
     )
-    conn.commit()
+    return cur.fetchall()
 
 def get(uid, t):
     cur.execute(
@@ -115,6 +120,37 @@ def fmt_proeb(proebs):
     if not proebs:
         return ""
     return "\n".join([f"{i+1}. ⛔ {r}" for i, (_, r) in enumerate(proebs)])
+
+def fmt_warn_dates(warns):
+    if not warns:
+        return ""
+
+    lines = []
+
+    for i, (_, reason, created_at) in enumerate(warns):
+        date = datetime.fromisoformat(created_at).strftime("%d.%m.%Y")
+
+        lines.append(
+            f"{i+1}. ⚠️ {reason}\n📅 {date}"
+        )
+
+    return "\n\n".join(lines)
+
+
+def fmt_proeb_dates(proebs):
+    if not proebs:
+        return ""
+
+    lines = []
+
+    for i, (_, reason, created_at) in enumerate(proebs):
+        date = datetime.fromisoformat(created_at).strftime("%d.%m.%Y")
+
+        lines.append(
+            f"{i+1}. ⛔ {reason}\n📅 {date}"
+        )
+
+    return "\n\n".join(lines)
 
 # ---------------- TEXT COMMANDS ----------------
 
@@ -353,7 +389,7 @@ async def adme(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if not context.args:
         await update.message.reply_text(
-            "Укажи ник.\nПример: адми Иван"
+            "Укажи ник.\nПример: адми 『乃ｙStarfly"
         )
         return
 
@@ -418,7 +454,7 @@ async def reme(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if not context.args:
         await update.message.reply_text(
-            "Укажи новый ник.\nПример: реми Вася"
+            "Укажи новый ник.\nПример: реми 『乃ｙStarfly"
         )
         return
 
@@ -733,10 +769,10 @@ async def myr(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = f"<b>❕ РЕЕСТР ПОЛЬЗОВАТЕЛЯ</b>\n\n👤 @{uid}\n\n"
 
     if proebs:
-        text += fmt_proeb(proebs) + "\n\n"
+        text += fmt_proeb_dates(proebs) + "\n\n"
 
     if warns:
-        text += fmt_warn(warns)
+        text += fmt_warn_dates(warns)
 
     await update.message.reply_text(
         text,
@@ -765,10 +801,10 @@ async def ree(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = f"<b>❕ РЕЕСТР ПОЛЬЗОВАТЕЛЯ</b>\n\n👤 @{uid}\n\n"
 
     if proebs:
-        text += fmt_proeb(proebs) + "\n\n"
+        text += fmt_proeb_dates(proebs) + "\n\n"
 
     if warns:
-        text += fmt_warn(warns)
+        text += fmt_warn_dates(warns)
 
     await update.message.reply_text(
         text,
@@ -1014,10 +1050,6 @@ async def comm(update: Update, context: ContextTypes.DEFAULT_TYPE):
 <b>Мур</b>
 Показать свой реестр нарушений.
 
-Пример:
-
-<code>Мур</code>
-
 ──────────────
 
 <b>Рее</b>
@@ -1035,10 +1067,6 @@ async def comm(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 <b>Приписка</b>
 Показать приписку.
-
-Пример:
-
-<code>Приписка</code>
 
 ──────────────
 
