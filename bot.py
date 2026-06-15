@@ -1104,9 +1104,9 @@ async def relist(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     text = "<b>📋 СПИСОК УЧАСТНИКОВ 📋</b>\n\n"
 
-    for tg_id, username, name in users:
+    for tg_id, username, first_name, name in users:
 
-        for tg_id, username, first_name, name in users:
+        display = username if username else first_name
 
         text += f"{name} | {display}\n"
 
@@ -1133,7 +1133,7 @@ async def reestr(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     text = "<b>📛 РЕЕСТР НАРУШЕНИЙ 📛</b>\n\n"
 
-    for tg_id, username, name in users:
+    for tg_id, username, first_name, name in users:
 
         warns = get(tg_id, "warn")
         proebs = get(tg_id, "proeb")
@@ -1141,10 +1141,9 @@ async def reestr(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if not warns and not proebs:
             continue
 
-        if username:
-            text += f"{name} | {username}\n"
-        else:
-            text += f"{name} | Без юза\n"
+        display = username if username else first_name
+
+        text += f"{name} | {display}\n"
 
         if proebs:
             text += fmt_proeb(proebs) + "\n"
@@ -1158,7 +1157,6 @@ async def reestr(update: Update, context: ContextTypes.DEFAULT_TYPE):
         text,
         parse_mode="HTML"
     )
-
 
 # ---------------- COMM ----------------
 
