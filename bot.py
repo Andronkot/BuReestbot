@@ -1416,7 +1416,7 @@ app.add_handler(
         text_commands
     )
 )
-
+print("TOKEN:", TOKEN[:15])
 print("BOT STARTED")
 
 app.run_polling()
