@@ -19,7 +19,9 @@ cur = conn.cursor()
 
 cur.execute("""
 CREATE TABLE IF NOT EXISTS users (
-    user_id TEXT PRIMARY KEY,
+    tg_id TEXT PRIMARY KEY,
+    username TEXT,
+    first_name TEXT,
     name TEXT
 )
 """)
@@ -27,14 +29,13 @@ CREATE TABLE IF NOT EXISTS users (
 cur.execute("""
 CREATE TABLE IF NOT EXISTS violations (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_id TEXT,
+    tg_id TEXT,
     type TEXT,
     reason TEXT,
     created_at TEXT,
     moderator TEXT
 )
 """)
-
 conn.commit()
 
 # ---------------- HELPERS ----------------
@@ -42,17 +43,56 @@ conn.commit()
 def clean(u):
     return u.replace("@", "").strip()
 
+def display_user(user):
+    if user.username:
+        return user.username
+
+    return user.first_name
+
+def sync_user(user):
+    tg_id = str(user.id)
+
+    username = user.username
+    first_name = user.first_name
+
+    cur.execute(
+        """
+        UPDATE users
+        SET username=?,
+            first_name=?
+        WHERE tg_id=?
+        """,
+        (
+            username,
+            first_name,
+            tg_id
+        )
+    )
+
+    conn.commit()
+
 def get_target(update, context):
     if update.message.reply_to_message:
-        user = update.message.reply_to_message.from_user
-
-        if user.username:
-            return user.username
-
-        return str(user.id)
+        return str(
+            update.message.reply_to_message.from_user.id
+        )
 
     if context.args:
-        return clean(context.args[0])
+        target = clean(context.args[0])
+
+        cur.execute(
+            """
+            SELECT tg_id
+            FROM users
+            WHERE username=?
+            """,
+            (target,)
+        )
+
+        row = cur.fetchone()
+
+        if row:
+            return row[0]
 
     return None
 
@@ -62,16 +102,33 @@ async def is_admin(update: Update):
 
 def add_v(uid, t, r, mod):
     cur.execute(
-        "INSERT INTO violations(user_id,type,reason,created_at,moderator) VALUES (?,?,?,?,?)",
-        (uid, t, r, datetime.now().isoformat(), mod)
+        """
+        INSERT INTO violations
+        (tg_id, type, reason, created_at, moderator)
+        VALUES (?, ?, ?, ?, ?)
+        """,
+        (
+            uid,
+            t,
+            r,
+            datetime.now().isoformat(),
+            mod
+        )
     )
+
     conn.commit()
 
 def get(uid, t):
     cur.execute(
-        "SELECT id, reason FROM violations WHERE user_id=? AND type=? ORDER BY id ASC",
+        """
+        SELECT id, reason
+        FROM violations
+        WHERE tg_id=? AND type=?
+        ORDER BY id ASC
+        """,
         (uid, t)
     )
+
     return cur.fetchall()
 
 def get_full(uid, t):
@@ -79,28 +136,76 @@ def get_full(uid, t):
         """
         SELECT id, reason, created_at
         FROM violations
-        WHERE user_id=? AND type=?
+        WHERE tg_id=? AND type=?
         ORDER BY id ASC
         """,
         (uid, t)
     )
+
     return cur.fetchall()
+
+def get_display(uid):
+    cur.execute(
+        """
+        SELECT username, first_name
+        FROM users
+        WHERE tg_id=?
+        """,
+        (uid,)
+    )
+
+    row = cur.fetchone()
+
+    if not row:
+        return str(uid)
+
+    username, first_name = row
+
+    if username:
+        return username
+
+    return first_name or str(uid)
 
 def delete_by_id(i):
     cur.execute("DELETE FROM violations WHERE id=?", (i,))
     conn.commit()
 
 def delete_all(uid, t):
-    cur.execute("DELETE FROM violations WHERE user_id=? AND type=?", (uid, t))
+    cur.execute(
+        "DELETE FROM violations WHERE tg_id=? AND type=?",
+        (uid, t)
+    )
+    conn.commit()
+
+async def auto_cleanup(update, context):
+    cleanup_proebs()
+
+    if update.effective_user:
+        sync_user(update.effective_user)
+
+def cleanup_proebs():
+    limit = datetime.now() - timedelta(days=30)
+
+    cur.execute(
+        """
+        DELETE FROM violations
+        WHERE type='proeb'
+        AND created_at < ?
+        """,
+        (limit.isoformat(),)
+    )
+
     conn.commit()
 
 def sort_users(users):
     def sort_key(user):
-        uid, name = user
+
+        tg_id, username, first_name, name = user
 
         pos = name.find("ｙ")
 
         if pos != -1 and pos + 1 < len(name):
+
             ch = name[pos + 1]
 
             if (
@@ -108,14 +213,23 @@ def sort_users(users):
                 or
                 ("а" <= ch.lower() <= "я")
             ):
-                return (0, ch.lower(), name.lower())
+                return (
+                    0,
+                    ch.lower(),
+                    name.lower()
+                )
 
-            return (1, name.lower())
+            return (
+                1,
+                name.lower()
+            )
 
-        return (2, name.lower())
+        return (
+            2,
+            name.lower()
+        )
 
     return sorted(users, key=sort_key)
-
 # ---------------- FORMAT ----------------
 
 def fmt_warn(warns):
@@ -369,17 +483,77 @@ async def pripiska(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("『乃ｙ")
 
 # ---------------- ADD ----------------
+
 async def add(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await is_admin(update):
         return
 
-    uid = clean(context.args[0])
+    # ВАРИАНТ ЧЕРЕЗ РЕПЛАЙ
+
+    if update.message.reply_to_message:
+
+        if not context.args:
+            await update.message.reply_text(
+                "Укажи ник.\nПример: Ад 『乃ｙStarfly"
+            )
+            return
+
+        user = update.message.reply_to_message.from_user
+
+        tg_id = str(user.id)
+        username = user.username
+        first_name = user.first_name
+        name = " ".join(context.args)
+
+        cur.execute(
+            """
+            INSERT OR REPLACE INTO users
+            (tg_id, username, first_name, name)
+            VALUES (?, ?, ?, ?)
+            """,
+            (
+                tg_id,
+                username,
+                first_name,
+                name
+            )
+        )
+
+        conn.commit()
+
+        await update.message.reply_text(
+            "<b>👤 Пользователь добавлен</b>",
+            parse_mode="HTML"
+        )
+        return
+
+    # ВАРИАНТ ЧЕРЕЗ @USERNAME
+
+    if len(context.args) < 2:
+        await update.message.reply_text(
+            "Использование:\n"
+            "Ад @user Ник\n"
+            "или реплай + Ад Ник"
+        )
+        return
+
+    username = clean(context.args[0])
     name = " ".join(context.args[1:])
 
     cur.execute(
-        "INSERT OR REPLACE INTO users VALUES (?,?)",
-        (uid, name)
+        """
+        INSERT OR REPLACE INTO users
+        (tg_id, username, first_name, name)
+        VALUES (?, ?, ?, ?)
+        """,
+        (
+            username,
+            username,
+            None,
+            name
+        )
     )
+
     conn.commit()
 
     await update.message.reply_text(
@@ -390,24 +564,35 @@ async def add(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # ---------------- ADME ----------------
 
 async def adme(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    uid = (
-        update.effective_user.username
-        if update.effective_user.username
-        else str(update.effective_user.id)
-    )
 
     if not context.args:
         await update.message.reply_text(
-            "Укажи ник.\nПример: адми Иван"
+            "Укажи ник.\nПример: Адми Иван"
         )
         return
+
+    tg_id = str(update.effective_user.id)
+
+    username = update.effective_user.username
+
+    first_name = update.effective_user.first_name
 
     name = " ".join(context.args)
 
     cur.execute(
-        "INSERT OR REPLACE INTO users VALUES (?, ?)",
-        (uid, name)
+        """
+        INSERT OR REPLACE INTO users
+        (tg_id, username, first_name, name)
+        VALUES (?, ?, ?, ?)
+        """,
+        (
+            tg_id,
+            username,
+            first_name,
+            name
+        )
     )
+
     conn.commit()
 
     await update.message.reply_text(
@@ -417,42 +602,13 @@ async def adme(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 # ---------------- RENAME ----------------
 
-async def rename(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if not await is_admin(update):
-        await update.message.reply_text("☝️Ты не админ !")
-        return
-
-    if len(context.args) < 2:
-        return
-
-    uid = clean(context.args[0])
-    new_name = " ".join(context.args[1:])
-
-    cur.execute("UPDATE users SET name=? WHERE user_id=?", (new_name, uid))
-    conn.commit()
-
-    await update.message.reply_text(
-        "<b>✏️ Пользователь переименован</b>",
-        parse_mode="HTML"
-    )
-
-# ---------------- REN ----------------
-
-async def ren(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    return await rename(update, context)
-
-# ---------------- REME ----------------
-
 async def reme(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    uid = (
-        update.effective_user.username
-        if update.effective_user.username
-        else str(update.effective_user.id)
-    )
+
+    tg_id = str(update.effective_user.id)
 
     cur.execute(
-        "SELECT 1 FROM users WHERE user_id=?",
-        (uid,)
+        "SELECT 1 FROM users WHERE tg_id=?",
+        (tg_id,)
     )
 
     if not cur.fetchone():
@@ -463,15 +619,58 @@ async def reme(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if not context.args:
         await update.message.reply_text(
-            "Укажи новый ник.\nПример: реми Вася"
+            "Укажи новый ник.\nПример: Реми 『乃ｙStarfly"
         )
         return
 
     new_name = " ".join(context.args)
 
     cur.execute(
-        "UPDATE users SET name=? WHERE user_id=?",
-        (new_name, uid)
+        """
+        UPDATE users
+        SET name=?
+        WHERE tg_id=?
+        """,
+        (
+            new_name,
+            tg_id
+        )
+    )
+
+    conn.commit()
+
+    await update.message.reply_text(
+        "<b>✏️ Ник изменён</b>",
+        parse_mode="HTML"
+    )
+
+# ---------------- REME ----------------
+
+async def reme(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    tg_id = str(update.effective_user.id)
+
+    cur.execute(
+        "SELECT 1 FROM users WHERE tg_id=?",
+        (tg_id,)
+    )
+
+    if not cur.fetchone():
+        await update.message.reply_text(
+            "Сначала добавь себя через команду Адми."
+        )
+        return
+
+    if not context.args:
+        await update.message.reply_text(
+            "Укажи новый ник.\nПример: Реми 『乃ｙStarfly"
+        )
+        return
+
+    new_name = " ".join(context.args)
+
+    cur.execute(
+        "UPDATE users SET name=? WHERE tg_id=?",
+        (new_name, tg_id)
     )
     conn.commit()
 
@@ -515,7 +714,11 @@ async def pred(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.message.reply_to_message:
         reason = " ".join(context.args)
     else:
-        reason = " ".join(context.args[1:]) if len(context.args) > 1 else ""
+        reason = (
+            " ".join(context.args[1:])
+            if len(context.args) > 1
+            else ""
+        )
 
     mod = (
         f"@{update.effective_user.username}"
@@ -525,15 +728,18 @@ async def pred(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     add_v(uid, "warn", reason, mod)
 
-    text = f"""❗@{uid} получает ⚠️ Предупреждение
-⏳Будет снято когда исправишься
-👺Модератор: {mod}"""
+    display = get_display(uid)
+
+    text = (
+        f"❗{display} получает ⚠️ Предупреждение\n"
+        f"⏳Будет снято когда исправишься\n"
+        f"👺Модератор: {mod}"
+    )
 
     if reason:
         text += f"\n💬Причина: {reason}"
 
     await update.message.reply_text(text)
-
 
 # ---------------- PROEB ----------------
 
@@ -552,17 +758,29 @@ async def proeb(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.message.reply_to_message:
         reason = " ".join(context.args)
     else:
-        reason = " ".join(context.args[1:]) if len(context.args) > 1 else ""
+        reason = (
+            " ".join(context.args[1:])
+            if len(context.args) > 1
+            else ""
+        )
 
-    mod = f"@{update.effective_user.username}" if update.effective_user.username else str(update.effective_user.id)
+    mod = (
+        f"@{update.effective_user.username}"
+        if update.effective_user.username
+        else str(update.effective_user.id)
+    )
 
     add_v(uid, "proeb", reason, mod)
 
     count = len(get(uid, "proeb"))
 
-    text = f"""❗{uid} получает ⛔ Проеб ({count}/3)
-⏳Будет снято через 30 дней
-👺Модератор: {mod}"""
+    display = get_display(uid)
+
+    text = (
+        f"❗{display} получает ⛔ Проеб ({count}/3)\n"
+        f"⏳Будет снято через 30 дней\n"
+        f"👺Модератор: {mod}"
+    )
 
     if reason:
         text += f"\n💬Причина: {reason}"
@@ -570,8 +788,9 @@ async def proeb(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(text)
 
     if count >= 3:
-        await update.message.reply_text(f"🚨 {uid} достиг максимального числа ⛔Проебов (3/3) !")
-
+        await update.message.reply_text(
+            f"🚨 {display} достиг максимального числа ⛔Проебов (3/3) !"
+        )
 
 # ---------------- UNPRED ----------------
 
@@ -619,8 +838,10 @@ async def unpred(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     delete_by_id(vid)
 
+    display = get_display(uid)
+
     await update.message.reply_text(
-        f"✅ С пользователя @{uid} снято предупреждение"
+        f"✅ С пользователя {display} снято предупреждение"
     )
 
 # ---------------- UNPRPROEB ----------------
@@ -669,38 +890,61 @@ async def unproeb(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     delete_by_id(vid)
 
+    display = get_display(uid)
+
     await update.message.reply_text(
-        f"✅ С пользователя @{uid} снят проеб"
+        f"✅ С пользователя {display} снят проеб"
     )
 
-# ---------------- ALL REMOVE ----------------
+# ---------------- UNPREDS ----------------
 
 async def unpreds(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await is_admin(update):
         return
 
-    uid = clean(context.args[0])
+    uid = get_target(update, context)
+
+    if not uid:
+        await update.message.reply_text(
+            "Укажи пользователя или ответь на сообщение."
+        )
+        return
+
     cnt = len(get(uid, "warn"))
 
     delete_all(uid, "warn")
 
+    display = get_display(uid)
+
     await update.message.reply_text(
-        f"С пользователя {uid} были сняты все ⚠️предупреждения ({cnt}/{cnt})"
+        f"С пользователя {display} были сняты все ⚠️предупреждения ({cnt}/{cnt})"
     )
 
+# ---------------- UNPROEBS ----------------
 
 async def unproebs(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await is_admin(update):
-        await update.message.reply_text("☝️Ты не админ !")
+        await update.message.reply_text(
+            "☝️Ты не админ !"
+        )
         return
 
-    uid = clean(context.args[0])
+    uid = get_target(update, context)
+
+    if not uid:
+        await update.message.reply_text(
+            "Укажи пользователя или ответь на сообщение."
+        )
+        return
+
     cnt = len(get(uid, "proeb"))
 
     delete_all(uid, "proeb")
 
+    display = get_display(uid)
+
     await update.message.reply_text(
-        f"С пользователя {uid} были сняты все ⛔проебы ({cnt}/{cnt})"
+        f"С пользователя {display} были сняты все ⛔проебы ({cnt}/{cnt})"
     )
 
 # ---------------- STRONG ----------------
@@ -757,25 +1001,41 @@ async def strong(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     add_v(uid, "proeb", reason, mod)
 
+    count = len(get(uid, "proeb"))
+
+    display = get_display(uid)
+
     await update.message.reply_text(
-        f"⚠️ Предупреждение пользователя @{uid} "
-        f"преобразовано в ⛔ Проеб\n"
-        f"Не игнорируй предупреждения!"
+        f"{display} ⚠️ Предупреждение теперь ⛔ Проеб ({count}/3)\n"
+        f"Не игнорируй предупреждения !"
     )
+
+    if count >= 3:
+        await update.message.reply_text(
+            f"🚨 {display} достиг максимального числа ⛔Проебов (3/3) !"
+        )
 
 # ---------------- MYR ----------------
 
 async def myr(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    uid = clean(context.args[0]) if context.args else str(update.effective_user.username)
+
+    uid = str(update.effective_user.id)
 
     warns = get_full(uid, "warn")
     proebs = get_full(uid, "proeb")
 
     if not warns and not proebs:
-        await update.message.reply_text("Замечания отсутствуют 🤗")
+        await update.message.reply_text(
+            "Замечания отсутствуют 🤗"
+        )
         return
 
-    text = f"<b>❕ РЕЕСТР ПОЛЬЗОВАТЕЛЯ</b>\n\n👤 @{uid}\n\n"
+    display = get_display(uid)
+
+    text = (
+        f"<b>❕ РЕЕСТР ПОЛЬЗОВАТЕЛЯ</b>\n\n"
+        f"👤 {display}\n\n"
+    )
 
     if proebs:
         text += fmt_proeb_full(proebs)
@@ -788,10 +1048,10 @@ async def myr(update: Update, context: ContextTypes.DEFAULT_TYPE):
         parse_mode="HTML"
     )
 
-
 # ---------------- REE ----------------
 
 async def ree(update: Update, context: ContextTypes.DEFAULT_TYPE):
+
     uid = get_target(update, context)
 
     if not uid:
@@ -804,10 +1064,17 @@ async def ree(update: Update, context: ContextTypes.DEFAULT_TYPE):
     proebs = get_full(uid, "proeb")
 
     if not warns and not proebs:
-        await update.message.reply_text("Замечания отсутствуют 🤗")
+        await update.message.reply_text(
+            "Замечания отсутствуют 🤗"
+        )
         return
 
-    text = f"<b>❕ РЕЕСТР ПОЛЬЗОВАТЕЛЯ</b>\n\n👤 @{uid}\n\n"
+    display = get_display(uid)
+
+    text = (
+        f"<b>❕ РЕЕСТР ПОЛЬЗОВАТЕЛЯ</b>\n\n"
+        f"👤 {display}\n\n"
+    )
 
     if proebs:
         text += fmt_proeb_full(proebs)
@@ -820,20 +1087,28 @@ async def ree(update: Update, context: ContextTypes.DEFAULT_TYPE):
         parse_mode="HTML"
     )
 
-
 # ---------------- RELIST ----------------
 
 async def relist(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await is_admin(update):
         return
 
-    cur.execute("SELECT * FROM users")
+    cur.execute(
+        """
+        SELECT tg_id, username, first_name, name
+        FROM users
+        """
+    )
+
     users = sort_users(cur.fetchall())
 
     text = "<b>📋 СПИСОК УЧАСТНИКОВ 📋</b>\n\n"
 
-    for uid, name in users:
-        text += f"{name} | @{uid}\n"
+    for tg_id, username, name in users:
+
+        for tg_id, username, first_name, name in users:
+
+        text += f"{name} | {display}\n"
 
     await update.message.reply_text(
         text,
@@ -847,19 +1122,29 @@ async def reestr(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await is_admin(update):
         return
 
-    cur.execute("SELECT * FROM users")
+    cur.execute(
+        """
+        SELECT tg_id, username, first_name, name
+        FROM users
+        """
+    )
+
     users = sort_users(cur.fetchall())
 
     text = "<b>📛 РЕЕСТР НАРУШЕНИЙ 📛</b>\n\n"
 
-    for uid, name in users:
-        warns = get(uid, "warn")
-        proebs = get(uid, "proeb")
+    for tg_id, username, name in users:
+
+        warns = get(tg_id, "warn")
+        proebs = get(tg_id, "proeb")
 
         if not warns and not proebs:
             continue
 
-        text += f"{name} | @{uid}\n"
+        if username:
+            text += f"{name} | {username}\n"
+        else:
+            text += f"{name} | Без юза\n"
 
         if proebs:
             text += fmt_proeb(proebs) + "\n"
@@ -873,6 +1158,7 @@ async def reestr(update: Update, context: ContextTypes.DEFAULT_TYPE):
         text,
         parse_mode="HTML"
     )
+
 
 # ---------------- COMM ----------------
 
@@ -1095,6 +1381,12 @@ async def comm(update: Update, context: ContextTypes.DEFAULT_TYPE):
         text,
         parse_mode="HTML"
     )
+
+# ТРИГГЕР АВТОПРОВЕРКИ ПРОЕБОВ
+app.add_handler(
+    MessageHandler(filters.ALL, auto_cleanup),
+    group=0
+)
 
 # ---------------- APP ----------------
 
