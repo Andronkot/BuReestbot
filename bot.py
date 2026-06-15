@@ -1379,7 +1379,11 @@ async def comm(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 # ---------------- APP ----------------
 
+print("START")
+
 app = ApplicationBuilder().token(TOKEN).build()
+
+print("TOKEN OK")
 
 # ТРИГГЕР АВТОПРОВЕРКИ ПРОЕБОВ
 app.add_handler(
@@ -1412,5 +1416,7 @@ app.add_handler(
         text_commands
     )
 )
+
+print("BOT STARTED")
 
 app.run_polling()
