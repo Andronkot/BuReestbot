@@ -1380,15 +1380,15 @@ async def comm(update: Update, context: ContextTypes.DEFAULT_TYPE):
         parse_mode="HTML"
     )
 
+# ---------------- APP ----------------
+
+app = ApplicationBuilder().token(TOKEN).build()
+
 # ТРИГГЕР АВТОПРОВЕРКИ ПРОЕБОВ
 app.add_handler(
     MessageHandler(filters.ALL, auto_cleanup),
     group=0
 )
-
-# ---------------- APP ----------------
-
-app = ApplicationBuilder().token(TOKEN).build()
 
 app.add_handler(CommandHandler("pripiska", pripiska))
 app.add_handler(CommandHandler("add", add))
