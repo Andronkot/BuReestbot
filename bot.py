@@ -602,28 +602,28 @@ async def adme(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 # ---------------- RENAME ----------------
 
-async def reme(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def rename(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not await is_admin(update):
+        return
 
-    tg_id = str(update.effective_user.id)
+    uid = get_target(update, context)
 
-    cur.execute(
-        "SELECT 1 FROM users WHERE tg_id=?",
-        (tg_id,)
-    )
-
-    if not cur.fetchone():
+    if not uid:
         await update.message.reply_text(
-            "Сначала добавь себя через команду Адми."
+            "Укажи пользователя или ответь на сообщение."
         )
         return
 
-    if not context.args:
-        await update.message.reply_text(
-            "Укажи новый ник.\nПример: Реми 『乃ｙStarfly"
-        )
-        return
+    if update.message.reply_to_message:
+        new_name = " ".join(context.args)
+    else:
+        if len(context.args) < 2:
+            await update.message.reply_text(
+                "Использование: Ренейм @user НовыйНик"
+            )
+            return
 
-    new_name = " ".join(context.args)
+        new_name = " ".join(context.args[1:])
 
     cur.execute(
         """
@@ -631,19 +631,15 @@ async def reme(update: Update, context: ContextTypes.DEFAULT_TYPE):
         SET name=?
         WHERE tg_id=?
         """,
-        (
-            new_name,
-            tg_id
-        )
+        (new_name, uid)
     )
 
     conn.commit()
 
     await update.message.reply_text(
-        "<b>✏️ Ник изменён</b>",
+        "<b>✏️ Пользователь переименован</b>",
         parse_mode="HTML"
     )
-
 # ---------------- REME ----------------
 
 async def reme(update: Update, context: ContextTypes.DEFAULT_TYPE):
