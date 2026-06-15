@@ -230,6 +230,7 @@ def sort_users(users):
         )
 
     return sorted(users, key=sort_key)
+
 # ---------------- FORMAT ----------------
 
 def fmt_warn(warns):
@@ -1390,7 +1391,6 @@ app.add_handler(CommandHandler("pripiska", pripiska))
 app.add_handler(CommandHandler("add", add))
 app.add_handler(CommandHandler("adme", adme))
 app.add_handler(CommandHandler("rename", rename))
-app.add_handler(CommandHandler("ren", ren))
 app.add_handler(CommandHandler("reme", reme))
 app.add_handler(CommandHandler("del", delete))
 app.add_handler(CommandHandler("pred", pred))
