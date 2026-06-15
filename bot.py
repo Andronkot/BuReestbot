@@ -171,10 +171,7 @@ def delete_by_id(i):
     conn.commit()
 
 def delete_all(uid, t):
-    cur.execute(
-        "DELETE FROM violations WHERE tg_id=? AND type=?",
-        (uid, t)
-    )
+    cur.execute("DELETE FROM violations WHERE user_id=? AND type=?", (uid, t))
     conn.commit()
 
 async def auto_cleanup(update, context):
@@ -230,7 +227,6 @@ def sort_users(users):
         )
 
     return sorted(users, key=sort_key)
-
 # ---------------- FORMAT ----------------
 
 def fmt_warn(warns):
@@ -603,28 +599,28 @@ async def adme(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 # ---------------- RENAME ----------------
 
-async def rename(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if not await is_admin(update):
-        return
+async def reme(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
-    uid = get_target(update, context)
+    tg_id = str(update.effective_user.id)
 
-    if not uid:
+    cur.execute(
+        "SELECT 1 FROM users WHERE tg_id=?",
+        (tg_id,)
+    )
+
+    if not cur.fetchone():
         await update.message.reply_text(
-            "Укажи пользователя или ответь на сообщение."
+            "Сначала добавь себя через команду Адми."
         )
         return
 
-    if update.message.reply_to_message:
-        new_name = " ".join(context.args)
-    else:
-        if len(context.args) < 2:
-            await update.message.reply_text(
-                "Использование: Ренейм @user НовыйНик"
-            )
-            return
+    if not context.args:
+        await update.message.reply_text(
+            "Укажи новый ник.\nПример: Реми 『乃ｙStarfly"
+        )
+        return
 
-        new_name = " ".join(context.args[1:])
+    new_name = " ".join(context.args)
 
     cur.execute(
         """
@@ -632,15 +628,19 @@ async def rename(update: Update, context: ContextTypes.DEFAULT_TYPE):
         SET name=?
         WHERE tg_id=?
         """,
-        (new_name, uid)
+        (
+            new_name,
+            tg_id
+        )
     )
 
     conn.commit()
 
     await update.message.reply_text(
-        "<b>✏️ Пользователь переименован</b>",
+        "<b>✏️ Ник изменён</b>",
         parse_mode="HTML"
     )
+
 # ---------------- REME ----------------
 
 async def reme(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -1092,7 +1092,7 @@ async def relist(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     cur.execute(
         """
-        SELECT tg_id, username, first_name, name
+        SELECT tg_id, username, name
         FROM users
         """
     )
@@ -1101,7 +1101,7 @@ async def relist(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     text = "<b>📋 СПИСОК УЧАСТНИКОВ 📋</b>\n\n"
 
-    for tg_id, username, first_name, name in users:
+    for tg_id, username, name in users:
 
         display = username if username else first_name
 
@@ -1121,7 +1121,7 @@ async def reestr(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     cur.execute(
         """
-        SELECT tg_id, username, first_name, name
+        SELECT tg_id, username, name
         FROM users
         """
     )
@@ -1130,7 +1130,7 @@ async def reestr(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     text = "<b>📛 РЕЕСТР НАРУШЕНИЙ 📛</b>\n\n"
 
-    for tg_id, username, first_name, name in users:
+    for tg_id, username, name in users:
 
         warns = get(tg_id, "warn")
         proebs = get(tg_id, "proeb")
@@ -1138,9 +1138,10 @@ async def reestr(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if not warns and not proebs:
             continue
 
-        display = username if username else first_name
-
-        text += f"{name} | {display}\n"
+        if username:
+            text += f"{name} | {username}\n"
+        else:
+            text += f"{name} | Без юза\n"
 
         if proebs:
             text += fmt_proeb(proebs) + "\n"
@@ -1154,6 +1155,7 @@ async def reestr(update: Update, context: ContextTypes.DEFAULT_TYPE):
         text,
         parse_mode="HTML"
     )
+
 
 # ---------------- COMM ----------------
 
@@ -1377,24 +1379,21 @@ async def comm(update: Update, context: ContextTypes.DEFAULT_TYPE):
         parse_mode="HTML"
     )
 
-# ---------------- APP ----------------
-
-print("START")
-
-app = ApplicationBuilder().token(TOKEN).build()
-
-print("TOKEN OK")
-
 # ТРИГГЕР АВТОПРОВЕРКИ ПРОЕБОВ
 app.add_handler(
     MessageHandler(filters.ALL, auto_cleanup),
     group=0
 )
 
+# ---------------- APP ----------------
+
+app = ApplicationBuilder().token(TOKEN).build()
+
 app.add_handler(CommandHandler("pripiska", pripiska))
 app.add_handler(CommandHandler("add", add))
 app.add_handler(CommandHandler("adme", adme))
 app.add_handler(CommandHandler("rename", rename))
+app.add_handler(CommandHandler("ren", ren))
 app.add_handler(CommandHandler("reme", reme))
 app.add_handler(CommandHandler("del", delete))
 app.add_handler(CommandHandler("pred", pred))
@@ -1416,7 +1415,5 @@ app.add_handler(
         text_commands
     )
 )
-print("TOKEN:", TOKEN[:15])
-print("BOT STARTED")
 
 app.run_polling()
