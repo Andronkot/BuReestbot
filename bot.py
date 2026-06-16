@@ -17,12 +17,12 @@ cur = conn.cursor()
 
 # ---------------- DB ----------------
 
-cur.execute("""
 CREATE TABLE IF NOT EXISTS users (
-    user_id TEXT PRIMARY KEY,
+    tg_id TEXT,
+    username TEXT UNIQUE,
+    first_name TEXT,
     name TEXT
 )
-""")
 
 cur.execute("""
 CREATE TABLE IF NOT EXISTS violations (
@@ -351,47 +351,93 @@ async def text_commands(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 # ---------------- COMMANDS ----------------
 
-# ---------------- TEST ----------------
-
-async def test(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user = (
-        update.message.reply_to_message.from_user
-        if update.message.reply_to_message
-        else update.effective_user
-    )
-
-    await update.message.reply_text(
-        f"""
-ID: {user.id}
-
-USERNAME:
-{user.username}
-
-FIRST_NAME:
-{user.first_name}
-
-FULL_NAME:
-{user.full_name}
-"""
-    )
-
 # ---------------- PRIPISKA ----------------
 
 async def pripiska(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("『乃ｙ")
 
 # ---------------- ADD ----------------
+
 async def add(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await is_admin(update):
         return
 
-    uid = clean(context.args[0])
+    # через реплай
+    if update.message.reply_to_message:
+
+        if not context.args:
+            await update.message.reply_text(
+                "Укажи ник."
+            )
+            return
+
+        user = update.message.reply_to_message.from_user
+
+        tg_id = str(user.id)
+        username = user.username or ""
+        first_name = user.first_name or ""
+
+        name = " ".join(context.args)
+
+        cur.execute(
+            """
+            INSERT OR REPLACE INTO users
+            (
+                tg_id,
+                username,
+                first_name,
+                name
+            )
+            VALUES (?, ?, ?, ?)
+            """,
+            (
+                tg_id,
+                username,
+                first_name,
+                name
+            )
+        )
+
+        conn.commit()
+
+        await update.message.reply_text(
+            "<b>👤 Пользователь добавлен</b>",
+            parse_mode="HTML"
+        )
+
+        return
+
+    # через @username
+
+    if len(context.args) < 2:
+        await update.message.reply_text(
+            "Использование:\nАд @user Ник"
+        )
+        return
+
+    username = clean(context.args[0])
+
     name = " ".join(context.args[1:])
 
     cur.execute(
-        "INSERT OR REPLACE INTO users VALUES (?,?)",
-        (uid, name)
+        """
+        INSERT OR REPLACE INTO users
+        (
+            tg_id,
+            username,
+            first_name,
+            name
+        )
+        VALUES (?, ?, ?, ?)
+        """,
+        (
+            None,
+            username,
+            None,
+            name
+        )
     )
+
     conn.commit()
 
     await update.message.reply_text(
@@ -1107,7 +1153,6 @@ async def comm(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 app = ApplicationBuilder().token(TOKEN).build()
 
-app.add_handler(CommandHandler("test", test))
 app.add_handler(CommandHandler("pripiska", pripiska))
 app.add_handler(CommandHandler("add", add))
 app.add_handler(CommandHandler("adme", adme))
