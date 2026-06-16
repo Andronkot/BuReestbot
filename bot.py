@@ -450,31 +450,46 @@ async def add(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # ---------------- ADME ----------------
 
 async def adme(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    uid = (
-        update.effective_user.username
-        if update.effective_user.username
-        else str(update.effective_user.id)
-    )
 
     if not context.args:
         await update.message.reply_text(
-            "Укажи ник.\nПример: адми Иван"
+            "Укажи ник.\nПример: Адми Иван"
         )
         return
+
+    user = update.effective_user
+
+    tg_id = str(user.id)
+    username = user.username or ""
+    first_name = user.first_name or ""
 
     name = " ".join(context.args)
 
     cur.execute(
-        "INSERT OR REPLACE INTO users VALUES (?, ?)",
-        (uid, name)
+        """
+        INSERT OR REPLACE INTO users
+        (
+            tg_id,
+            username,
+            first_name,
+            name
+        )
+        VALUES (?, ?, ?, ?)
+        """,
+        (
+            tg_id,
+            username,
+            first_name,
+            name
+        )
     )
+
     conn.commit()
 
     await update.message.reply_text(
         "<b>👤 Пользователь добавлен</b>",
         parse_mode="HTML"
     )
-
 # ---------------- RENAME ----------------
 
 async def rename(update: Update, context: ContextTypes.DEFAULT_TYPE):
