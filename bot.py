@@ -19,9 +19,7 @@ cur = conn.cursor()
 
 cur.execute("""
 CREATE TABLE IF NOT EXISTS users (
-    tg_id TEXT,
-    username TEXT UNIQUE,
-    first_name TEXT,
+    user_id TEXT PRIMARY KEY,
     name TEXT
 )
 """)
@@ -38,95 +36,6 @@ CREATE TABLE IF NOT EXISTS violations (
 """)
 
 conn.commit()
-
-# ---------------- SYNC USER ----------------
-
-def sync_user(user):
-
-    tg_id = str(user.id)
-    username = user.username or ""
-    first_name = user.first_name or ""
-
-    cur.execute(
-        """
-        SELECT username
-        FROM users
-        WHERE tg_id=?
-        """,
-        (tg_id,)
-    )
-
-    row = cur.fetchone()
-
-    if row:
-
-        cur.execute(
-            """
-            UPDATE users
-            SET
-                username=?,
-                first_name=?
-            WHERE tg_id=?
-            """,
-            (
-                username,
-                first_name,
-                tg_id
-            )
-        )
-
-    else:
-
-        cur.execute(
-            """
-            SELECT username
-            FROM users
-            WHERE username=?
-            """,
-            (username,)
-        )
-
-        row = cur.fetchone()
-
-        if row:
-
-            cur.execute(
-                """
-                UPDATE users
-                SET
-                    tg_id=?,
-                    first_name=?
-                WHERE username=?
-                """,
-                (
-                    tg_id,
-                    first_name,
-                    username
-                )
-            )
-
-        else:
-
-            cur.execute(
-                """
-                INSERT INTO users
-                (
-                    tg_id,
-                    username,
-                    first_name,
-                    name
-                )
-                VALUES (?, ?, ?, ?)
-                """,
-                (
-                    tg_id,
-                    username,
-                    first_name,
-                    None
-                )
-            )
-
-    conn.commit()
 
 # ---------------- HELPERS ----------------
 
@@ -206,11 +115,6 @@ def sort_users(users):
         return (2, name.lower())
 
     return sorted(users, key=sort_key)
-
-#TEST
-
-def mention(user_id, text):
-    return f'<a href="tg://user?id={user_id}">{text}</a>'
 
 # ---------------- FORMAT ----------------
 
@@ -447,115 +351,47 @@ async def text_commands(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 # ---------------- COMMANDS ----------------
 
+# ---------------- TEST ----------------
+
+async def test(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user = (
+        update.message.reply_to_message.from_user
+        if update.message.reply_to_message
+        else update.effective_user
+    )
+
+    await update.message.reply_text(
+        f"""
+ID: {user.id}
+
+USERNAME:
+{user.username}
+
+FIRST_NAME:
+{user.first_name}
+
+FULL_NAME:
+{user.full_name}
+"""
+    )
+
 # ---------------- PRIPISKA ----------------
 
 async def pripiska(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("『乃ｙ")
 
 # ---------------- ADD ----------------
-
 async def add(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await is_admin(update):
         return
 
-    # РЕПЛАЙ
-    if update.message.reply_to_message:
-
-        if not context.args:
-            await update.message.reply_text(
-                "Укажи ник для реестра."
-            )
-            return
-
-        user = update.message.reply_to_message.from_user
-
-        tg_id = str(user.id)
-        username = user.username or ""
-        first_name = user.first_name or ""
-
-        name = " ".join(context.args)
-
-        cur.execute(
-            """
-            INSERT OR REPLACE INTO users
-            (tg_id, username, first_name, name)
-            VALUES (?, ?, ?, ?)
-            """,
-            (
-                tg_id,
-                username,
-                first_name,
-                name
-            )
-        )
-
-        conn.commit()
-
-        await update.message.reply_text(
-            "<b>👤 Пользователь добавлен</b>",
-            parse_mode="HTML"
-        )
-
-        return
-
-    # ЧЕРЕЗ @USERNAME
-    if len(context.args) < 2:
-        await update.message.reply_text(
-            "Использование:\n"
-            "Ад @username Ник"
-        )
-        return
-
-    username = clean(context.args[0])
-
+    uid = clean(context.args[0])
     name = " ".join(context.args[1:])
 
     cur.execute(
-        """
-        SELECT username
-        FROM users
-        WHERE username=?
-        """,
-        (username,)
+        "INSERT OR REPLACE INTO users VALUES (?,?)",
+        (uid, name)
     )
-
-    row = cur.fetchone()
-
-    if row:
-
-        cur.execute(
-            """
-            UPDATE users
-            SET name=?
-            WHERE username=?
-            """,
-            (
-                name,
-                username
-            )
-        )
-
-    else:
-
-        cur.execute(
-            """
-            INSERT INTO users
-            (
-                tg_id,
-                username,
-                first_name,
-                name
-            )
-            VALUES (?, ?, ?, ?)
-            """,
-            (
-                None,
-                username,
-                None,
-                name
-            )
-        )
-
     conn.commit()
 
     await update.message.reply_text(
@@ -566,34 +402,24 @@ async def add(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # ---------------- ADME ----------------
 
 async def adme(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    uid = (
+        update.effective_user.username
+        if update.effective_user.username
+        else str(update.effective_user.id)
+    )
+
     if not context.args:
         await update.message.reply_text(
-            "Укажи ник.\nПример: Адми 『乃ｙStarfly"
+            "Укажи ник.\nПример: адми Иван"
         )
         return
-
-    user = update.effective_user
-
-    tg_id = str(user.id)
-    username = user.username or ""
-    first_name = user.first_name or ""
 
     name = " ".join(context.args)
 
     cur.execute(
-        """
-        INSERT OR REPLACE INTO users
-        (tg_id, username, first_name, name)
-        VALUES (?, ?, ?, ?)
-        """,
-        (
-            tg_id,
-            username,
-            first_name,
-            name
-        )
+        "INSERT OR REPLACE INTO users VALUES (?, ?)",
+        (uid, name)
     )
-
     conn.commit()
 
     await update.message.reply_text(
@@ -625,12 +451,15 @@ async def rename(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # ---------------- REME ----------------
 
 async def reme(update: Update, context: ContextTypes.DEFAULT_TYPE):
-
-    tg_id = str(update.effective_user.id)
+    uid = (
+        update.effective_user.username
+        if update.effective_user.username
+        else str(update.effective_user.id)
+    )
 
     cur.execute(
-        "SELECT 1 FROM users WHERE tg_id=?",
-        (tg_id,)
+        "SELECT 1 FROM users WHERE user_id=?",
+        (uid,)
     )
 
     if not cur.fetchone():
@@ -641,30 +470,23 @@ async def reme(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if not context.args:
         await update.message.reply_text(
-            "Укажи новый ник.\nПример: Реми 『乃ｙStarfly"
+            "Укажи новый ник.\nПример: реми Вася"
         )
         return
 
     new_name = " ".join(context.args)
 
     cur.execute(
-        """
-        UPDATE users
-        SET name=?
-        WHERE tg_id=?
-        """,
-        (
-            new_name,
-            tg_id
-        )
+        "UPDATE users SET name=? WHERE user_id=?",
+        (new_name, uid)
     )
-
     conn.commit()
 
     await update.message.reply_text(
-        "<b>✏️ Ник изменён</b>",
+        f"<b>✏️ Ник изменён</b>\n\n",
         parse_mode="HTML"
     )
+
 # ---------------- DEL ----------------
 
 async def delete(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -1281,19 +1103,11 @@ async def comm(update: Update, context: ContextTypes.DEFAULT_TYPE):
         parse_mode="HTML"
     )
 
-# ---------------- TRACK USER ----------------
-
-async def track_user(update: Update, context: ContextTypes.DEFAULT_TYPE):
-
-    if not update.effective_user:
-        return
-
-    sync_user(update.effective_user)
-
 # ---------------- APP ----------------
 
 app = ApplicationBuilder().token(TOKEN).build()
 
+app.add_handler(CommandHandler("test", test))
 app.add_handler(CommandHandler("pripiska", pripiska))
 app.add_handler(CommandHandler("add", add))
 app.add_handler(CommandHandler("adme", adme))
@@ -1312,14 +1126,6 @@ app.add_handler(CommandHandler("ree", ree))
 app.add_handler(CommandHandler("relist", relist))
 app.add_handler(CommandHandler("reestr", reestr))
 app.add_handler(CommandHandler("comm", comm))
-
-app.add_handler(
-    MessageHandler(
-        filters.TEXT & ~filters.COMMAND,
-        track_user
-    ),
-    group=0
-)
 
 app.add_handler(
     MessageHandler(
