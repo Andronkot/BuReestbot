@@ -614,6 +614,12 @@ async def pred(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     add_v(uid, "warn", reason, mod)
 
+    await update.message.reply_text(
+        f"DEBUG\n"
+        f"uid = {uid}\n"
+        f"type = warn"
+    )
+
     text = f"""❗@{uid} получает ⚠️ Предупреждение
 ⏳Будет снято когда исправишься
 👺Модератор: {mod}"""
