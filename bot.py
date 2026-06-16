@@ -97,12 +97,18 @@ def delete_all(uid, t):
     conn.commit()
 
 def sort_users(users):
+
     def sort_key(user):
-        uid, name = user
+
+        tg_id, username, first_name, name = user
+
+        if not name:
+            return (9, "")
 
         pos = name.find("ｙ")
 
         if pos != -1 and pos + 1 < len(name):
+
             ch = name[pos + 1]
 
             if (
@@ -110,13 +116,26 @@ def sort_users(users):
                 or
                 ("а" <= ch.lower() <= "я")
             ):
-                return (0, ch.lower(), name.lower())
+                return (
+                    0,
+                    ch.lower(),
+                    name.lower()
+                )
 
-            return (1, name.lower())
+            return (
+                1,
+                name.lower()
+            )
 
-        return (2, name.lower())
+        return (
+            2,
+            name.lower()
+        )
 
-    return sorted(users, key=sort_key)
+    return sorted(
+        users,
+        key=sort_key
+    )
 
 # ---------------- FORMAT ----------------
 
@@ -902,7 +921,7 @@ async def relist(update: Update, context: ContextTypes.DEFAULT_TYPE):
         FROM users
     """)
 
-    users = cur.fetchall()
+    users = sort_users(cur.fetchall())
 
     text = "<b>📋 СПИСОК УЧАСТНИКОВ 📋</b>\n\n"
 
