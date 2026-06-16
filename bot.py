@@ -945,19 +945,29 @@ async def reestr(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await is_admin(update):
         return
 
-    cur.execute("SELECT * FROM users")
+    cur.execute("""
+        SELECT tg_id, username, first_name, name
+        FROM users
+    """)
+
     users = sort_users(cur.fetchall())
 
     text = "<b>📛 РЕЕСТР НАРУШЕНИЙ 📛</b>\n\n"
 
-    for uid, name in users:
+    for tg_id, username, first_name, name in users:
+
+        uid = username if username else tg_id
+
         warns = get(uid, "warn")
         proebs = get(uid, "proeb")
 
         if not warns and not proebs:
             continue
 
-        text += f"{name} | @{uid}\n"
+        if username:
+            text += f"{name} | @{username}\n"
+        else:
+            text += f"{name} | Без юза\n"
 
         if proebs:
             text += fmt_proeb(proebs) + "\n"
@@ -971,7 +981,6 @@ async def reestr(update: Update, context: ContextTypes.DEFAULT_TYPE):
         text,
         parse_mode="HTML"
     )
-
 # ---------------- COMM ----------------
 
 async def comm(update: Update, context: ContextTypes.DEFAULT_TYPE):
