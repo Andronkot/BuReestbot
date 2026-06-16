@@ -522,7 +522,11 @@ async def rename(update: Update, context: ContextTypes.DEFAULT_TYPE):
     uid = clean(context.args[0])
     new_name = " ".join(context.args[1:])
 
-    cur.execute("UPDATE users SET name=? WHERE user_id=?", (new_name, uid))
+    cur.execute(
+        "UPDATE users SET name=? WHERE username=?",
+        (new_name, uid)
+    )
+
     conn.commit()
 
     await update.message.reply_text(
@@ -533,14 +537,17 @@ async def rename(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # ---------------- REME ----------------
 
 async def reme(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    uid = (
-        update.effective_user.username
-        if update.effective_user.username
-        else str(update.effective_user.id)
-    )
+
+    uid = update.effective_user.username
+
+    if not uid:
+        await update.message.reply_text(
+            "У тебя отсутствует username Telegram."
+        )
+        return
 
     cur.execute(
-        "SELECT 1 FROM users WHERE user_id=?",
+        "SELECT 1 FROM users WHERE username=?",
         (uid,)
     )
 
@@ -559,13 +566,14 @@ async def reme(update: Update, context: ContextTypes.DEFAULT_TYPE):
     new_name = " ".join(context.args)
 
     cur.execute(
-        "UPDATE users SET name=? WHERE user_id=?",
+        "UPDATE users SET name=? WHERE username=?",
         (new_name, uid)
     )
+
     conn.commit()
 
     await update.message.reply_text(
-        f"<b>✏️ Ник изменён</b>\n\n",
+        "<b>✏️ Ник изменён</b>",
         parse_mode="HTML"
     )
 
