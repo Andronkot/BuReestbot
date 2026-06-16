@@ -17,12 +17,14 @@ cur = conn.cursor()
 
 # ---------------- DB ----------------
 
+cur.execute("""
 CREATE TABLE IF NOT EXISTS users (
     tg_id TEXT,
     username TEXT UNIQUE,
     first_name TEXT,
     name TEXT
 )
+""")
 
 cur.execute("""
 CREATE TABLE IF NOT EXISTS violations (
