@@ -208,18 +208,6 @@ async def text_commands(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         return await rename(update, context)
 
-    # РЕН
-
-    if lower == "рен" or lower.startswith("рен "):
-        parts = text.split(maxsplit=1)
-
-        if len(parts) > 1:
-            context.args = parts[1].split()
-        else:
-            context.args = []
-
-        return await ren(update, context)
-
     # РЕМИ
 
     if lower == "реми" or lower.startswith("реми "):
@@ -363,6 +351,30 @@ async def text_commands(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 # ---------------- COMMANDS ----------------
 
+# ---------------- TEST ----------------
+
+async def test(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user = (
+        update.message.reply_to_message.from_user
+        if update.message.reply_to_message
+        else update.effective_user
+    )
+
+    await update.message.reply_text(
+        f"""
+ID: {user.id}
+
+USERNAME:
+{user.username}
+
+FIRST_NAME:
+{user.first_name}
+
+FULL_NAME:
+{user.full_name}
+"""
+    )
+
 # ---------------- PRIPISKA ----------------
 
 async def pripiska(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -435,11 +447,6 @@ async def rename(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "<b>✏️ Пользователь переименован</b>",
         parse_mode="HTML"
     )
-
-# ---------------- REN ----------------
-
-async def ren(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    return await rename(update, context)
 
 # ---------------- REME ----------------
 
@@ -1100,11 +1107,11 @@ async def comm(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 app = ApplicationBuilder().token(TOKEN).build()
 
+app.add_handler(CommandHandler("test", test))
 app.add_handler(CommandHandler("pripiska", pripiska))
 app.add_handler(CommandHandler("add", add))
 app.add_handler(CommandHandler("adme", adme))
 app.add_handler(CommandHandler("rename", rename))
-app.add_handler(CommandHandler("ren", ren))
 app.add_handler(CommandHandler("reme", reme))
 app.add_handler(CommandHandler("del", delete))
 app.add_handler(CommandHandler("pred", pred))
