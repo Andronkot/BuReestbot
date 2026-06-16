@@ -116,6 +116,11 @@ def sort_users(users):
 
     return sorted(users, key=sort_key)
 
+#TEST
+
+def mention(user_id, text):
+    return f'<a href="tg://user?id={user_id}">{text}</a>'
+
 # ---------------- FORMAT ----------------
 
 def fmt_warn(warns):
@@ -362,7 +367,8 @@ async def test(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await update.message.reply_text(
         f"""
-ID: {user.id}
+ID:
+{user.id}
 
 USERNAME:
 {user.username}
@@ -372,7 +378,11 @@ FIRST_NAME:
 
 FULL_NAME:
 {user.full_name}
-"""
+
+MENTION:
+{mention(user.id, user.username or user.first_name)}
+""",
+        parse_mode="HTML"
     )
 
 # ---------------- PRIPISKA ----------------
