@@ -897,20 +897,29 @@ async def relist(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await is_admin(update):
         return
 
-    cur.execute("SELECT * FROM users")
-    users = sort_users(cur.fetchall())
+    cur.execute("""
+        SELECT tg_id, username, first_name, name
+        FROM users
+    """)
+
+    users = cur.fetchall()
 
     text = "<b>📋 СПИСОК УЧАСТНИКОВ 📋</b>\n\n"
 
-    for uid, name in users:
-        text += f"{name} | @{uid}\n"
+    for tg_id, username, first_name, name in users:
+
+        if username:
+            display = f"@{username}"
+        else:
+            display = "Без юза"
+
+        text += f"{name} | {display}\n"
 
     await update.message.reply_text(
         text,
         parse_mode="HTML"
     )
-
-
+    
 # ---------------- REESTR ----------------
 
 async def reestr(update: Update, context: ContextTypes.DEFAULT_TYPE):
