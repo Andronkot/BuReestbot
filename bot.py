@@ -37,6 +37,25 @@ CREATE TABLE IF NOT EXISTS violations (
 )
 """)
 
+cur.execute("""
+CREATE TABLE IF NOT EXISTS settings (
+    key TEXT PRIMARY KEY,
+    value TEXT
+)
+""")
+
+# ДЕФОЛТНЫЕ НАСТРОЙКИ
+
+cur.execute(
+    "INSERT OR IGNORE INTO settings VALUES (?, ?)",
+    ("relist_mode", "username")
+)
+
+cur.execute(
+    "INSERT OR IGNORE INTO settings VALUES (?, ?)",
+    ("display_mode", "username")
+)
+
 conn.commit()
 
 # ---------------- SYNC USER ----------------
@@ -184,6 +203,54 @@ def sync_user(user):
             return
 
     print("SYNC -> NO MATCH")
+
+# ---------------- SETTINGS ----------------
+
+def get_setting(key):
+
+    cur.execute(
+        "SELECT value FROM settings WHERE key=?",
+        (key,)
+    )
+
+    row = cur.fetchone()
+
+    if row:
+        return row[0]
+
+    return None
+
+
+def set_setting(key, value):
+
+    cur.execute(
+        """
+        INSERT OR REPLACE INTO settings
+        VALUES (?, ?)
+        """,
+        (key, value)
+    )
+
+    conn.commit()
+
+# ---------------- DISPLAY NAME ----------------
+
+def get_display_name(
+    tg_id,
+    username,
+    first_name,
+    name,
+    mode
+):
+
+    if mode == "reestr":
+        return name
+
+    if mode == "firstname":
+        return first_name or username or name
+
+    return username or first_name or name
+
 # ---------------- HELPERS ----------------
 
 def clean(u):
@@ -555,6 +622,15 @@ async def text_commands(update, context: ContextTypes.DEFAULT_TYPE):
         return await comm(update, context)
 
 # ---------------- COMMANDS ----------------
+
+# ---------------- TEST SETTINGS ----------------
+
+async def testset(update: Update, context: ContextTypes.DEFAULT_TYPE):
+
+    await update.message.reply_text(
+        f"relist_mode = {get_setting('relist_mode')}\n"
+        f"display_mode = {get_setting('display_mode')}"
+    )
 
 # ---------------- PRIPISKA ----------------
 
@@ -1438,6 +1514,7 @@ async def comm(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 app = ApplicationBuilder().token(TOKEN).build()
 
+app.add_handler(CommandHandler("testset", testset))
 app.add_handler(CommandHandler("pripiska", pripiska))
 app.add_handler(CommandHandler("add", add))
 app.add_handler(CommandHandler("adme", adme))
