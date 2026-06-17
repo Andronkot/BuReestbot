@@ -583,10 +583,21 @@ async def delete(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await is_admin(update):
         return
 
+    if not context.args:
+        return
+
     uid = clean(context.args[0])
 
-    cur.execute("DELETE FROM users WHERE user_id=?", (uid,))
-    cur.execute("DELETE FROM violations WHERE user_id=?", (uid,))
+    cur.execute(
+        "DELETE FROM users WHERE username=?",
+        (uid,)
+    )
+
+    cur.execute(
+        "DELETE FROM violations WHERE user_id=?",
+        (uid,)
+    )
+
     conn.commit()
 
     await update.message.reply_text(
@@ -821,6 +832,10 @@ async def strong(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     warns = get(uid, "warn")
+
+    await update.message.reply_text(
+        f"DEBUG\nuid={uid}\nwarns={len(warns)}"
+    )
 
     if not warns:
         await update.message.reply_text(
