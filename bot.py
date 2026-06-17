@@ -41,6 +41,12 @@ conn.commit()
 
 # ---------------- SYNC USER ----------------
 
+print(
+    f"SYNC: id={tg_id} "
+    f"user={username} "
+    f"name={first_name}"
+)
+
 def sync_user(user):
 
     tg_id = str(user.id)
@@ -123,7 +129,7 @@ def sync_user(user):
             """
             SELECT username
             FROM users
-            WHERE username IS NOT NULL
+            WHERE tg_id IS NULL
             """
         )
 
@@ -133,21 +139,16 @@ def sync_user(user):
 
             stored_username = row[0]
 
-            if not stored_username.startswith("@"):
-                continue
-
-            if stored_username[1:] == first_name:
+            if stored_username.lower() == first_name.lower():
                 matches.append(stored_username)
 
         if len(matches) == 1:
-
             cur.execute(
                 """
                 UPDATE users
-                SET
-                    tg_id=?,
+                SET tg_id=?,
                     first_name=?
-                WHERE username=?
+                WHERE username = ?
                 """,
                 (
                     tg_id,
@@ -157,7 +158,6 @@ def sync_user(user):
             )
 
             conn.commit()
-
 # ---------------- HELPERS ----------------
 
 def clean(u):
