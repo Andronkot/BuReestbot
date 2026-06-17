@@ -39,6 +39,125 @@ CREATE TABLE IF NOT EXISTS violations (
 
 conn.commit()
 
+# ---------------- SYNC USER ----------------
+
+def sync_user(user):
+
+    tg_id = str(user.id)
+    username = user.username or ""
+    first_name = user.first_name or ""
+
+    # ищем по tg_id
+
+    cur.execute(
+        """
+        SELECT username
+        FROM users
+        WHERE tg_id=?
+        """,
+        (tg_id,)
+    )
+
+    row = cur.fetchone()
+
+    if row:
+
+        cur.execute(
+            """
+            UPDATE users
+            SET
+                username=?,
+                first_name=?
+            WHERE tg_id=?
+            """,
+            (
+                username,
+                first_name,
+                tg_id
+            )
+        )
+
+        conn.commit()
+        return
+
+    # ищем по username
+
+    if username:
+
+        cur.execute(
+            """
+            SELECT username
+            FROM users
+            WHERE username=?
+            """,
+            (username,)
+        )
+
+        row = cur.fetchone()
+
+        if row:
+
+            cur.execute(
+                """
+                UPDATE users
+                SET
+                    tg_id=?,
+                    first_name=?
+                WHERE username=?
+                """,
+                (
+                    tg_id,
+                    first_name,
+                    username
+                )
+            )
+
+            conn.commit()
+            return
+
+    # пользователь без username
+
+    if not username and first_name:
+
+        cur.execute(
+            """
+            SELECT username
+            FROM users
+            WHERE username IS NOT NULL
+            """
+        )
+
+        matches = []
+
+        for row in cur.fetchall():
+
+            stored_username = row[0]
+
+            if not stored_username.startswith("@"):
+                continue
+
+            if stored_username[1:] == first_name:
+                matches.append(stored_username)
+
+        if len(matches) == 1:
+
+            cur.execute(
+                """
+                UPDATE users
+                SET
+                    tg_id=?,
+                    first_name=?
+                WHERE username=?
+                """,
+                (
+                    tg_id,
+                    first_name,
+                    matches[0]
+                )
+            )
+
+            conn.commit()
+
 # ---------------- HELPERS ----------------
 
 def clean(u):
@@ -184,7 +303,10 @@ def fmt_proeb_full(proebs):
 
 # ---------------- TEXT COMMANDS ----------------
 
-async def text_commands(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def text_commands(update, context: ContextTypes.DEFAULT_TYPE):
+
+    sync_user(update.effective_user)
+
     text = update.message.text.strip()
     lower = text.lower()
 
