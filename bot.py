@@ -616,21 +616,30 @@ async def text_commands(update, context: ContextTypes.DEFAULT_TYPE):
     if lower == "реестр":
         return await reestr(update, context)
 
+    # СЕТ
+
+    if lower == "сет" or lower.startswith("сет "):
+        parts = text.split(maxsplit=1)
+
+        if len(parts) > 1:
+            context.args = parts[1].split()
+        else:
+            context.args = []
+
+        return await set_cmd(update, context)
+
+    # СЕТТИНГ
+
+    if lower == "сеттинг":
+        context.args = []
+        return await setting(update, context)
+
     # КОМ
 
     if lower == "ком":
         return await comm(update, context)
 
 # ---------------- COMMANDS ----------------
-
-# ---------------- TEST SETTINGS ----------------
-
-async def testset(update: Update, context: ContextTypes.DEFAULT_TYPE):
-
-    await update.message.reply_text(
-        f"relist_mode = {get_setting('relist_mode')}\n"
-        f"display_mode = {get_setting('display_mode')}"
-    )
 
 # ---------------- PRIPISKA ----------------
 
@@ -1288,6 +1297,105 @@ async def reestr(update: Update, context: ContextTypes.DEFAULT_TYPE):
         text,
         parse_mode="HTML"
     )
+
+# ---------------- SET ----------------
+
+async def set_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+
+    if not await is_admin(update):
+        return
+
+    if len(context.args) != 2:
+        return
+
+    section = context.args[0].lower()
+    value = context.args[1]
+
+    modes = {
+        "1": "username",
+        "2": "firstname",
+        "3": "reestr"
+    }
+
+    if value not in modes:
+        return
+
+    if section == "ос":
+        set_setting(
+            "relist_mode",
+            modes[value]
+        )
+
+    elif section == "ок":
+        set_setting(
+            "display_mode",
+            modes[value]
+        )
+
+    else:
+        return
+
+    await update.message.reply_text(
+        "✅ Настройки изменены"
+    )
+
+# ---------------- SETTING ----------------
+
+async def setting(update: Update, context: ContextTypes.DEFAULT_TYPE):
+
+    relist_mode = get_setting("relist_mode")
+    display_mode = get_setting("display_mode")
+
+    r1 = " (текущее)" if relist_mode == "username" else ""
+    r2 = " (текущее)" if relist_mode == "firstname" else ""
+    r3 = " (текущее)" if relist_mode == "reestr" else ""
+
+    d1 = " (текущее)" if display_mode == "username" else ""
+    d2 = " (текущее)" if display_mode == "firstname" else ""
+    d3 = " (текущее)" if display_mode == "reestr" else ""
+
+    text = f"""
+⚙️ <b>НАСТРОЙКИ</b> ⚙️
+--------------------------------
+
+📋 <b>Отображение в списках</b>
+•Релист •Реестр
+
+1️⃣ Username{r1}
+『乃ｙStarfly | @Bystarfly
+
+2️⃣ Имя Telegram{r2}
+『乃ｙStarfly | Ваня
+
+3️⃣ Ник реестра{r3}
+『乃ｙStarfly | 『乃ｙStarfly
+
+✍️ Изменить:
+Сет ос [Номер]
+
+--------------------------------
+
+🔗 <b>Отображение в командах</b>
+•Пред •Проеб •Мур •Рее •Стронг
+
+1️⃣ Username{d1}
+❗@Bystarfly получает пред
+
+2️⃣ Имя Telegram{d2}
+❗Ваня получает пред
+
+3️⃣ Ник реестра{d3}
+❗『乃ｙStarfly получает пред
+
+✍️ Изменить:
+Сет ок [Номер]
+"""
+
+    await update.message.reply_text(
+        text,
+        parse_mode="HTML"
+    )
+
 # ---------------- COMM ----------------
 
 async def comm(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -1514,7 +1622,6 @@ async def comm(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 app = ApplicationBuilder().token(TOKEN).build()
 
-app.add_handler(CommandHandler("testset", testset))
 app.add_handler(CommandHandler("pripiska", pripiska))
 app.add_handler(CommandHandler("add", add))
 app.add_handler(CommandHandler("adme", adme))
@@ -1532,6 +1639,8 @@ app.add_handler(CommandHandler("myr", myr))
 app.add_handler(CommandHandler("ree", ree))
 app.add_handler(CommandHandler("relist", relist))
 app.add_handler(CommandHandler("reestr", reestr))
+app.add_handler(CommandHandler("set", set_cmd))
+app.add_handler(CommandHandler("setting", setting))
 app.add_handler(CommandHandler("comm", comm))
 
 app.add_handler(
