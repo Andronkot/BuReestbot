@@ -1223,22 +1223,25 @@ async def relist(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     text = "<b>📋 СПИСОК УЧАСТНИКОВ 📋</b>\n\n"
 
+    mode = get_setting("relist_mode")
+
     for tg_id, username, first_name, name in users:
+
+        shown = get_display_name(
+            tg_id,
+            username,
+            first_name,
+            name,
+            mode
+        )
 
         if tg_id:
 
-            if username:
-                display = (
-                    f'<a href="tg://user?id={tg_id}">'
-                    f'{username}'
-                    f'</a>'
-                )
-            else:
-                display = (
-                    f'<a href="tg://user?id={tg_id}">'
-                    f'{first_name}'
-                    f'</a>'
-                )
+            display = (
+                f'<a href="tg://user?id={tg_id}">'
+                f'{shown}'
+                f'</a>'
+            )
 
         elif username:
 
@@ -1246,7 +1249,7 @@ async def relist(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         else:
 
-            display = "Без юза"
+            display = shown
 
         text += f"{name} | {display}\n"
 
