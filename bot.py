@@ -1223,9 +1223,64 @@ async def relist(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     text = "<b>📋 СПИСОК УЧАСТНИКОВ 📋</b>\n\n"
 
+    for tg_id, username, first_name, name in users:
+
+        if tg_id:
+
+            if username:
+                display = (
+                    f'<a href="tg://user?id={tg_id}">'
+                    f'{username}'
+                    f'</a>'
+                )
+            else:
+                display = (
+                    f'<a href="tg://user?id={tg_id}">'
+                    f'{first_name}'
+                    f'</a>'
+                )
+
+        elif username:
+
+            display = f"@{username}"
+
+        else:
+
+            display = "Без юза"
+
+        text += f"{name} | {display}\n"
+
+    await update.message.reply_text(
+        text,
+        parse_mode="HTML"
+    )
+    
+# ---------------- REESTR ----------------
+
+async def reestr(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not await is_admin(update):
+        return
+
+    cur.execute("""
+        SELECT tg_id, username, first_name, name
+        FROM users
+    """)
+
+    users = sort_users(cur.fetchall())
+
+    text = "<b>📛 РЕЕСТР НАРУШЕНИЙ 📛</b>\n\n"
+
     mode = get_setting("relist_mode")
 
     for tg_id, username, first_name, name in users:
+
+        uid = username if username else tg_id
+
+        warns = get(uid, "warn")
+        proebs = get(uid, "proeb")
+
+        if not warns and not proebs:
+            continue
 
         shown = get_display_name(
             tg_id,
@@ -1252,41 +1307,6 @@ async def relist(update: Update, context: ContextTypes.DEFAULT_TYPE):
             display = shown
 
         text += f"{name} | {display}\n"
-
-    await update.message.reply_text(
-        text,
-        parse_mode="HTML"
-    )
-    
-# ---------------- REESTR ----------------
-
-async def reestr(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if not await is_admin(update):
-        return
-
-    cur.execute("""
-        SELECT tg_id, username, first_name, name
-        FROM users
-    """)
-
-    users = sort_users(cur.fetchall())
-
-    text = "<b>📛 РЕЕСТР НАРУШЕНИЙ 📛</b>\n\n"
-
-    for tg_id, username, first_name, name in users:
-
-        uid = username if username else tg_id
-
-        warns = get(uid, "warn")
-        proebs = get(uid, "proeb")
-
-        if not warns and not proebs:
-            continue
-
-        if username:
-            text += f"{name} | @{username}\n"
-        else:
-            text += f"{name} | Без юза\n"
 
         if proebs:
             text += fmt_proeb(proebs) + "\n"
