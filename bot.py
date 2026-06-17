@@ -189,7 +189,7 @@ def sync_user(user):
 def clean(u):
     return u.replace("@", "").strip()
 
-def def get_target(update, context):
+def get_target(update, context):
 
     if update.message.reply_to_message:
 
