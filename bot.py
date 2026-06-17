@@ -300,6 +300,24 @@ def sort_users(users):
         key=sort_key
     )
 
+# DISPLAY USER
+
+def display_user(username, tg_id, name):
+
+    if tg_id:
+
+        return (
+            f'<a href="tg://user?id={tg_id}">'
+            f'{name}'
+            f'</a>'
+        )
+
+    if username:
+
+        return f"@{username}"
+
+    return name
+
 # ---------------- FORMAT ----------------
 
 def fmt_warn(warns):
@@ -1122,9 +1140,27 @@ async def relist(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     for tg_id, username, first_name, name in users:
 
-        if username:
+        if tg_id:
+
+            if username:
+                display = (
+                    f'<a href="tg://user?id={tg_id}">'
+                    f'{username}'
+                    f'</a>'
+                )
+            else:
+                display = (
+                    f'<a href="tg://user?id={tg_id}">'
+                    f'{first_name}'
+                    f'</a>'
+                )
+
+        elif username:
+
             display = f"@{username}"
+
         else:
+
             display = "Без юза"
 
         text += f"{name} | {display}\n"
