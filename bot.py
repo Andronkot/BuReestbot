@@ -189,14 +189,32 @@ def sync_user(user):
 def clean(u):
     return u.replace("@", "").strip()
 
-def get_target(update, context):
+def def get_target(update, context):
+
     if update.message.reply_to_message:
+
         user = update.message.reply_to_message.from_user
+
+        tg_id = str(user.id)
+
+        cur.execute(
+            """
+            SELECT username
+            FROM users
+            WHERE tg_id=?
+            """,
+            (tg_id,)
+        )
+
+        row = cur.fetchone()
+
+        if row and row[0]:
+            return row[0]
 
         if user.username:
             return user.username
 
-        return str(user.id)
+        return tg_id
 
     if context.args:
         return clean(context.args[0])
