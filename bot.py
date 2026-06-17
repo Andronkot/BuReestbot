@@ -41,19 +41,19 @@ conn.commit()
 
 # ---------------- SYNC USER ----------------
 
-print(
-    f"SYNC: id={tg_id} "
-    f"user={username} "
-    f"name={first_name}"
-)
-
 def sync_user(user):
 
     tg_id = str(user.id)
     username = user.username or ""
     first_name = user.first_name or ""
 
-    # ищем по tg_id
+    print(
+        f"SYNC | tg_id={tg_id} | "
+        f"username='{username}' | "
+        f"first_name='{first_name}'"
+    )
+
+    # ИЩЕМ ПО TG_ID
 
     cur.execute(
         """
@@ -67,6 +67,8 @@ def sync_user(user):
     row = cur.fetchone()
 
     if row:
+
+        print("SYNC -> FOUND BY TG_ID")
 
         cur.execute(
             """
@@ -86,7 +88,7 @@ def sync_user(user):
         conn.commit()
         return
 
-    # ищем по username
+    # ИЩЕМ ПО USERNAME
 
     if username:
 
@@ -102,6 +104,8 @@ def sync_user(user):
         row = cur.fetchone()
 
         if row:
+
+            print("SYNC -> FOUND BY USERNAME")
 
             cur.execute(
                 """
@@ -121,9 +125,11 @@ def sync_user(user):
             conn.commit()
             return
 
-    # пользователь без username
+    # ПОЛЬЗОВАТЕЛЬ БЕЗ USERNAME
 
     if not username and first_name:
+
+        print("SYNC -> NO USERNAME")
 
         cur.execute(
             """
@@ -139,16 +145,26 @@ def sync_user(user):
 
             stored_username = row[0]
 
+            if not stored_username:
+                continue
+
             if stored_username.lower() == first_name.lower():
+
                 matches.append(stored_username)
 
+        print(f"SYNC -> MATCHES: {matches}")
+
         if len(matches) == 1:
+
+            print("SYNC -> FOUND BY FIRST_NAME")
+
             cur.execute(
                 """
                 UPDATE users
-                SET tg_id=?,
+                SET
+                    tg_id=?,
                     first_name=?
-                WHERE username = ?
+                WHERE username=?
                 """,
                 (
                     tg_id,
@@ -158,6 +174,10 @@ def sync_user(user):
             )
 
             conn.commit()
+            return
+
+    print("SYNC -> NO MATCH")
+    
 # ---------------- HELPERS ----------------
 
 def clean(u):
