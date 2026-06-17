@@ -139,9 +139,16 @@ def sync_user(user):
             """
         )
 
+        rows = cur.fetchall()
+
+        print("DB USERS:")
+
+        for row in rows:
+            print(f"'{row[0]}'")
+
         matches = []
 
-        for row in cur.fetchall():
+        for row in rows:
 
             stored_username = row[0]
 
@@ -177,7 +184,6 @@ def sync_user(user):
             return
 
     print("SYNC -> NO MATCH")
-    
 # ---------------- HELPERS ----------------
 
 def clean(u):
