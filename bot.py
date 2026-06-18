@@ -445,15 +445,31 @@ def display_user(username, tg_id, name):
 
 # ---------------- FORMAT ----------------
 
+#ОТОБРАЖЕНИЕ ПРЕДОВ В РЕЕСТРЕ
 def fmt_warn(warns):
+
     if not warns:
         return ""
-    return "\n".join([f"{i+1}. ⚠️ {r}" for i, (_, r) in enumerate(warns)])
 
+    items = [
+        f"{i+1}. {r}"
+        for i, (_, r) in enumerate(warns)
+    ]
+
+    return "⚠️ Преды: " + " | ".join(items)
+
+#ОТОБРАЖЕНИЕ ПРОЕБОВ В РЕЕСТРЕ
 def fmt_proeb(proebs):
+
     if not proebs:
         return ""
-    return "\n".join([f"{i+1}. ⛔ {r}" for i, (_, r) in enumerate(proebs)])
+
+    items = [
+        f"{i+1}. {r}"
+        for i, (_, r) in enumerate(proebs)
+    ]
+
+    return "⛔ Проебы: " + " | ".join(items)
 
 def fmt_warn_full(warns):
     if not warns:
@@ -725,11 +741,28 @@ async def add(update: Update, context: ContextTypes.DEFAULT_TYPE):
         username = user.username or ""
         first_name = user.first_name or ""
 
+        cur.execute(
+            """
+            SELECT 1
+            FROM users
+            WHERE tg_id=?
+            """,
+            (tg_id,)
+        )
+
+        if cur.fetchone():
+
+            await update.message.reply_text(
+                "📝 Пользователь был добавлен ранее\n\n"
+                "Повторное добавление не требуется."
+            )
+            return
+
         name = " ".join(context.args)
 
         cur.execute(
             """
-            INSERT OR REPLACE INTO users
+            INSERT INTO users
             (
                 tg_id,
                 username,
@@ -765,11 +798,28 @@ async def add(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     username = clean(context.args[0])
 
+    cur.execute(
+        """
+        SELECT 1
+        FROM users
+        WHERE username=?
+        """,
+        (username,)
+    )
+
+    if cur.fetchone():
+
+        await update.message.reply_text(
+            "🙄 Пользователь уже в реестре\n\n"
+            "Повторное добавление не требуется."
+        )
+        return
+
     name = " ".join(context.args[1:])
 
     cur.execute(
         """
-        INSERT OR REPLACE INTO users
+        INSERT INTO users
         (
             tg_id,
             username,
