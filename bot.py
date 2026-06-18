@@ -1533,54 +1533,53 @@ async def set_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # ---------------- SETTING ----------------
 
 async def setting(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    os_mode = get_setting("os")
+    ok_mode = get_setting("ok")
 
-    relist_mode = get_setting("relist_mode")
-    display_mode = get_setting("display_mode")
+    os1 = "➤ " if os_mode == "username" else ""
+    os2 = "➤ " if os_mode == "firstname" else ""
+    os3 = "➤ " if os_mode == "reestr" else ""
 
-    r1 = " (текущее)" if relist_mode == "username" else ""
-    r2 = " (текущее)" if relist_mode == "firstname" else ""
-    r3 = " (текущее)" if relist_mode == "reestr" else ""
-
-    d1 = " (текущее)" if display_mode == "username" else ""
-    d2 = " (текущее)" if display_mode == "firstname" else ""
-    d3 = " (текущее)" if display_mode == "reestr" else ""
+    ok1 = "➤ " if ok_mode == "username" else ""
+    ok2 = "➤ " if ok_mode == "firstname" else ""
+    ok3 = "➤ " if ok_mode == "reestr" else ""
 
     text = f"""
-⚙️ <b>НАСТРОЙКИ</b> ⚙️
---------------------------------
+    <b>⚙️ НАСТРОЙКИ ⚙️</b>
+    --------------------------------
 
-📋 <b>Отображение в списках</b>
-•Релист •Реестр
+    <b>📋 Отображение в списках</b>
+    <i>Релист • Реестр</i>
 
-1️⃣ Username{r1}
-『乃ｙStarfly | @Bystarfly
+    {os1}<code>1️⃣ Username</code>
+    『乃ｙStarfly | @Bystarfly
 
-2️⃣ Имя Telegram{r2}
-『乃ｙStarfly | Ваня
+    {os2}<code>2️⃣ Имя Telegram</code>
+    『乃ｙStarfly | Ваня
 
-3️⃣ Ник реестра{r3}
-『乃ｙStarfly | 『乃ｙStarfly
+    {os3}<code>3️⃣ Ник реестра</code>
+    『乃ｙStarfly | 『乃ｙStarfly
 
-✍️ Изменить:
-Сет ос [Номер]
+    ✍️ Изменить:
+    Сет ос [Номер]
 
---------------------------------
+    --------------------------------
 
-🔗 <b>Отображение в командах</b>
-•Пред •Проеб •Мур •Рее •Стронг
+    <b>🔗 Отображение в командах</b>
+    <i>Пред • Проеб • Мур • Рее</i>
 
-1️⃣ Username{d1}
-❗@Bystarfly получает пред
+    {ok1}<code>1️⃣ Username</code>
+    ❗@Bystarfly получает пред
 
-2️⃣ Имя Telegram{d2}
-❗Ваня получает пред
+    {ok2}<code>2️⃣ Имя Telegram</code>
+    ❗Ваня получает пред
 
-3️⃣ Ник реестра{d3}
-❗『乃ｙStarfly получает пред
+    {ok3}<code>3️⃣ Ник реестра</code>
+    ❗『乃ｙStarfly получает пред
 
-✍️ Изменить:
-Сет ок [Номер]
-"""
+    ✍️ Изменить:
+    Сет ок [Номер]
+    """
 
     await update.message.reply_text(
         text,
