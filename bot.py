@@ -561,7 +561,7 @@ async def text_commands(update, context: ContextTypes.DEFAULT_TYPE):
 
     # РЕНЕЙМ
 
-    if lower == "рен" or lower.startswith("ренейм "):
+    if lower == "рен" or lower.startswith("рен "):
         parts = text.split(maxsplit=1)
 
         if len(parts) > 1:
@@ -1533,11 +1533,12 @@ async def set_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # ---------------- SETTING ----------------
 
 async def setting(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    print("OS =", os_mode)
-    print("OK =", ok_mode)
 
     os_mode = get_setting("os")
     ok_mode = get_setting("ok")
+
+    print("OS =", os_mode)
+    print("OK =", ok_mode)
 
     os1 = "➤ " if os_mode == "username" else ""
     os2 = "➤ " if os_mode == "firstname" else ""
