@@ -82,12 +82,6 @@ def sync_user(user):
     username = user.username or ""
     first_name = user.first_name or ""
 
-    print(
-        f"SYNC | tg_id={tg_id} | "
-        f"username='{username}' | "
-        f"first_name='{first_name}'"
-    )
-
     # ИЩЕМ ПО TG_ID
 
     cur.execute(
@@ -102,8 +96,6 @@ def sync_user(user):
     row = cur.fetchone()
 
     if row:
-
-        print("SYNC -> FOUND BY TG_ID")
 
         cur.execute(
             """
@@ -140,8 +132,6 @@ def sync_user(user):
 
         if row:
 
-            print("SYNC -> FOUND BY USERNAME")
-
             cur.execute(
                 """
                 UPDATE users
@@ -164,8 +154,6 @@ def sync_user(user):
 
     if not username and first_name:
 
-        print("SYNC -> NO USERNAME")
-
         cur.execute(
             """
             SELECT username
@@ -175,8 +163,6 @@ def sync_user(user):
         )
 
         rows = cur.fetchall()
-
-        print("DB USERS:")
 
         for row in rows:
             print(f"'{row[0]}'")
@@ -194,11 +180,7 @@ def sync_user(user):
 
                 matches.append(stored_username)
 
-        print(f"SYNC -> MATCHES: {matches}")
-
         if len(matches) == 1:
-
-            print("SYNC -> FOUND BY FIRST_NAME")
 
             cur.execute(
                 """
@@ -218,8 +200,6 @@ def sync_user(user):
             conn.commit()
             return
 
-    print("SYNC -> NO MATCH")
-
 # SETTINGS
 
 def get_setting(key):
@@ -233,6 +213,16 @@ def get_setting(key):
 
     if row:
         return row[0]
+
+    # значения по умолчанию
+
+    if key == "os":
+        set_setting("os", "username")
+        return "username"
+
+    if key == "ok":
+        set_setting("ok", "username")
+        return "username"
 
     return None
 
@@ -1513,13 +1503,13 @@ async def set_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if section == "ос":
         set_setting(
-            "relist_mode",
+            "os",
             modes[value]
         )
 
     elif section == "ок":
         set_setting(
-            "display_mode",
+            "ok",
             modes[value]
         )
 
@@ -1536,9 +1526,6 @@ async def setting(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     os_mode = get_setting("os")
     ok_mode = get_setting("ok")
-
-    print("OS =", os_mode)
-    print("OK =", ok_mode)
 
     os1 = "➤ " if os_mode == "username" else ""
     os2 = "➤ " if os_mode == "firstname" else ""
