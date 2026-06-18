@@ -282,6 +282,33 @@ def show_user(uid):
         get_setting("display_mode")
     )
 
+def show_user_html(uid):
+
+    cur.execute("""
+        SELECT tg_id, username, first_name, name
+        FROM users
+        WHERE username=? OR tg_id=?
+    """, (uid, uid))
+
+    row = cur.fetchone()
+
+    if not row:
+        return uid
+
+    tg_id, username, first_name, name = row
+
+    shown = show_user(uid)
+
+    if tg_id:
+
+        return (
+            f'<a href="tg://user?id={tg_id}">'
+            f'{shown}'
+            f'</a>'
+        )
+
+    return shown
+
 # ---------------- HELPERS ----------------
 
 def clean(u):
@@ -933,15 +960,17 @@ async def pred(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     add_v(uid, "warn", reason, mod)
 
-    text = f"""❗{show_user(uid)} получает ⚠️ Предупреждение
+    text = f"""❗{show_user_html(uid)} получает ⚠️ Предупреждение
 ⏳Будет снято когда исправишься
 👺Модератор: {mod}"""
 
     if reason:
         text += f"\n💬Причина: {reason}"
 
-    await update.message.reply_text(text)
-
+    await update.message.reply_text(
+        text,
+        parse_mode="HTML"
+    )
 
 # ---------------- PROEB ----------------
 
@@ -968,14 +997,17 @@ async def proeb(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     count = len(get(uid, "proeb"))
 
-    text = f"""❗{show_user(uid)} получает ⛔ Проеб ({count}/3)
+    text = f"""❗{show_user_html(uid)} получает ⛔ Проеб ({count}/3)
 ⏳Будет снято через 30 дней
 👺Модератор: {mod}"""
 
     if reason:
         text += f"\n💬Причина: {reason}"
 
-    await update.message.reply_text(text)
+    await update.message.reply_text(
+        text,
+        parse_mode="HTML"
+    )
 
     if count >= 3:
         await update.message.reply_text(f"🚨 {show_user(uid)} достиг максимального числа ⛔Проебов (3/3) !")
@@ -1028,7 +1060,8 @@ async def unpred(update: Update, context: ContextTypes.DEFAULT_TYPE):
     delete_by_id(vid)
 
     await update.message.reply_text(
-        f"✅ С пользователя @{uid} снято предупреждение"
+        f"✅ С пользователя {show_user_html(uid)} снято предупреждение",
+        parse_mode="HTML"
     )
 
 # ---------------- UNPRPROEB ----------------
@@ -1078,7 +1111,8 @@ async def unproeb(update: Update, context: ContextTypes.DEFAULT_TYPE):
     delete_by_id(vid)
 
     await update.message.reply_text(
-        f"✅ С пользователя @{uid} снят проеб"
+        f"✅ С пользователя {show_user_html(uid)} снят проеб",
+        parse_mode="HTML"
     )
 
 # ---------------- ALL REMOVE ----------------
@@ -1093,7 +1127,8 @@ async def unpreds(update: Update, context: ContextTypes.DEFAULT_TYPE):
     delete_all(uid, "warn")
 
     await update.message.reply_text(
-        f"С пользователя {uid} были сняты все ⚠️предупреждения ({cnt}/{cnt})"
+        f"С пользователя {show_user_html(uid)} были сняты все ⚠️предупреждения ({cnt}/{cnt})",
+        parse_mode="HTML"
     )
 
 
@@ -1108,7 +1143,8 @@ async def unproebs(update: Update, context: ContextTypes.DEFAULT_TYPE):
     delete_all(uid, "proeb")
 
     await update.message.reply_text(
-        f"С пользователя {uid} были сняты все ⛔проебы ({cnt}/{cnt})"
+        f"С пользователя {show_user_html(uid)} были сняты все ⛔проебы ({cnt}/{cnt})",
+        parse_mode="HTML"
     )
 
 # ---------------- STRONG ----------------
@@ -1126,10 +1162,6 @@ async def strong(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     warns = get(uid, "warn")
-
-    await update.message.reply_text(
-        f"DEBUG\nuid={uid}\nwarns={len(warns)}"
-    )
 
     if not warns:
         await update.message.reply_text(
@@ -1170,9 +1202,10 @@ async def strong(update: Update, context: ContextTypes.DEFAULT_TYPE):
     add_v(uid, "proeb", reason, mod)
 
     await update.message.reply_text(
-        f"⚠️ Предупреждение пользователя @{uid} "
+        f"⚠️ Предупреждение пользователя {show_user_html(uid)} "
         f"преобразовано в ⛔ Проеб\n"
-        f"Не игнорируй предупреждения!"
+        f"Не игнорируй предупреждения!",
+        parse_mode="HTML"
     )
 
 # ---------------- MYR ----------------
@@ -1187,7 +1220,7 @@ async def myr(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("Замечания отсутствуют 🤗")
         return
 
-    text = f"<b>❕ РЕЕСТР ПОЛЬЗОВАТЕЛЯ</b>\n\n👤 @{uid}\n\n"
+    text = f"<b>❕ РЕЕСТР ПОЛЬЗОВАТЕЛЯ</b>\n\n👤 {show_user_html(uid)}\n\n"
 
     if proebs:
         text += fmt_proeb_full(proebs)
@@ -1219,7 +1252,7 @@ async def ree(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("Замечания отсутствуют 🤗")
         return
 
-    text = f"<b>❕ РЕЕСТР ПОЛЬЗОВАТЕЛЯ</b>\n\n👤 @{uid}\n\n"
+    text = f"<b>❕ РЕЕСТР ПОЛЬЗОВАТЕЛЯ</b>\n\n👤 {show_user_html(uid)}\n\n"
 
     if proebs:
         text += fmt_proeb_full(proebs)
