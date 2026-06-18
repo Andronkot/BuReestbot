@@ -274,6 +274,14 @@ def get_display_user(uid, mode):
 
     return username or first_name or name or uid
 
+
+def show_user(uid):
+
+    return get_display_user(
+        uid,
+        get_setting("display_mode")
+    )
+
 # ---------------- HELPERS ----------------
 
 def clean(u):
