@@ -58,7 +58,9 @@ cur.execute(
 
 conn.commit()
 
-# ---------------- SYNC USER ----------------
+# ---------------- HELPERS ----------------
+
+# SYNC USER
 
 def sync_user(user):
 
@@ -204,7 +206,7 @@ def sync_user(user):
 
     print("SYNC -> NO MATCH")
 
-# ---------------- SETTINGS ----------------
+# SETTINGS
 
 def get_setting(key):
 
@@ -233,7 +235,7 @@ def set_setting(key, value):
 
     conn.commit()
 
-# ---------------- DISPLAY NAME ----------------
+# DISPLAY NAME
 
 def get_display_name(
     tg_id,
@@ -307,9 +309,10 @@ def show_user_html(uid):
             f'</a>'
         )
 
-    return shown
+    if username:
+        return f"@{username}"
 
-# ---------------- HELPERS ----------------
+    return name or shown
 
 def clean(u):
     return u.replace("@", "").strip()
@@ -451,12 +454,12 @@ def fmt_warn(warns):
     if not warns:
         return ""
 
-    items = [
-        f"{i+1}. {r}"
-        for i, (_, r) in enumerate(warns)
-    ]
-
-    return "⚠️ Преды: " + " | ".join(items)
+    return " | ".join(
+        [
+            f"{i+1}. ⚠️ {r}"
+            for i, (_, r) in enumerate(warns)
+        ]
+    )
 
 #ОТОБРАЖЕНИЕ ПРОЕБОВ В РЕЕСТРЕ
 def fmt_proeb(proebs):
@@ -464,12 +467,12 @@ def fmt_proeb(proebs):
     if not proebs:
         return ""
 
-    items = [
-        f"{i+1}. {r}"
-        for i, (_, r) in enumerate(proebs)
-    ]
-
-    return "⛔ Проебы: " + " | ".join(items)
+    return " | ".join(
+        [
+            f"{i+1}. ⛔ {r}"
+            for i, (_, r) in enumerate(proebs)
+        ]
+    )
 
 def fmt_warn_full(warns):
     if not warns:
@@ -810,7 +813,7 @@ async def add(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if cur.fetchone():
 
         await update.message.reply_text(
-            "🙄 Пользователь уже в реестре\n\n"
+            "📝 Пользователь был добавлен ранее\n\n"
             "Повторное добавление не требуется."
         )
         return
