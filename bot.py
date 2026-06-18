@@ -60,6 +60,20 @@ conn.commit()
 
 # ---------------- HELPERS ----------------
 
+# ЧЕККЕР ДОБАВЛЕНИЯ ПОЛЬЗОВАТЕЛЯ В БД
+def user_exists(uid):
+
+    cur.execute(
+        """
+        SELECT 1
+        FROM users
+        WHERE username=? OR tg_id=?
+        """,
+        (uid, uid)
+    )
+
+    return cur.fetchone() is not None
+
 # SYNC USER
 
 def sync_user(user):
@@ -967,6 +981,11 @@ async def delete(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     uid = clean(context.args[0])
+    if not user_exists(uid):
+        await update.message.reply_text(
+            "❌ Пользователь не найден в реестре"
+        )
+        return
 
     cur.execute(
         "DELETE FROM users WHERE username=?",
@@ -993,6 +1012,11 @@ async def pred(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     uid = get_target(update, context)
+    if not uid or not user_exists(uid):
+        await update.message.reply_text(
+            "❌ Пользователь не найден в реестре"
+        )
+        return
 
     if not uid:
         await update.message.reply_text(
@@ -1032,6 +1056,11 @@ async def proeb(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     uid = get_target(update, context)
+    if not uid or not user_exists(uid):
+        await update.message.reply_text(
+            "❌ Пользователь не найден в реестре"
+        )
+        return
 
     if not uid:
         await update.message.reply_text(
@@ -1073,6 +1102,11 @@ async def unpred(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     uid = get_target(update, context)
+    if not uid or not user_exists(uid):
+        await update.message.reply_text(
+            "❌ Пользователь не найден в реестре"
+        )
+        return
 
     if not uid:
         await update.message.reply_text(
@@ -1124,6 +1158,11 @@ async def unproeb(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     uid = get_target(update, context)
+    if not uid or not user_exists(uid):
+        await update.message.reply_text(
+            "❌ Пользователь не найден в реестре"
+        )
+        return
 
     if not uid:
         await update.message.reply_text(
@@ -1207,6 +1246,11 @@ async def strong(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     uid = get_target(update, context)
+    if not uid or not user_exists(uid):
+        await update.message.reply_text(
+            "❌ Пользователь не найден в реестре"
+        )
+        return
 
     if not uid:
         await update.message.reply_text(
@@ -1266,6 +1310,12 @@ async def strong(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def myr(update: Update, context: ContextTypes.DEFAULT_TYPE):
     uid = clean(context.args[0]) if context.args else str(update.effective_user.username)
 
+    if not user_exists(uid):
+        await update.message.reply_text(
+            "❌ Пользователь не найден в реестре"
+        )
+        return
+
     warns = get_full(uid, "warn")
     proebs = get_full(uid, "proeb")
 
@@ -1286,11 +1336,15 @@ async def myr(update: Update, context: ContextTypes.DEFAULT_TYPE):
         parse_mode="HTML"
     )
 
-
 # ---------------- REE ----------------
 
 async def ree(update: Update, context: ContextTypes.DEFAULT_TYPE):
     uid = get_target(update, context)
+    if not uid or not user_exists(uid):
+        await update.message.reply_text(
+            "❌ Пользователь не найден в реестре"
+        )
+        return
 
     if not uid:
         await update.message.reply_text(
