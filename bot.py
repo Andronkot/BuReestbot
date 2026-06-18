@@ -251,6 +251,29 @@ def get_display_name(
 
     return username or first_name or name
 
+def get_display_user(uid, mode):
+
+    cur.execute("""
+        SELECT tg_id, username, first_name, name
+        FROM users
+        WHERE username=? OR tg_id=?
+    """, (uid, uid))
+
+    row = cur.fetchone()
+
+    if not row:
+        return uid
+
+    tg_id, username, first_name, name = row
+
+    if mode == "firstname":
+        return first_name or username or name or uid
+
+    if mode == "reestr":
+        return name or username or first_name or uid
+
+    return username or first_name or name or uid
+
 # ---------------- HELPERS ----------------
 
 def clean(u):
@@ -902,13 +925,7 @@ async def pred(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     add_v(uid, "warn", reason, mod)
 
-    await update.message.reply_text(
-        f"DEBUG\n"
-        f"uid = {uid}\n"
-        f"type = warn"
-    )
-
-    text = f"""❗@{uid} получает ⚠️ Предупреждение
+    text = f"""❗{show_user(uid)} получает ⚠️ Предупреждение
 ⏳Будет снято когда исправишься
 👺Модератор: {mod}"""
 
@@ -943,7 +960,7 @@ async def proeb(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     count = len(get(uid, "proeb"))
 
-    text = f"""❗{uid} получает ⛔ Проеб ({count}/3)
+    text = f"""❗{show_user(uid)} получает ⛔ Проеб ({count}/3)
 ⏳Будет снято через 30 дней
 👺Модератор: {mod}"""
 
@@ -953,7 +970,7 @@ async def proeb(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(text)
 
     if count >= 3:
-        await update.message.reply_text(f"🚨 {uid} достиг максимального числа ⛔Проебов (3/3) !")
+        await update.message.reply_text(f"🚨 {show_user(uid)} достиг максимального числа ⛔Проебов (3/3) !")
 
 
 # ---------------- UNPRED ----------------
@@ -1223,22 +1240,25 @@ async def relist(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     text = "<b>📋 СПИСОК УЧАСТНИКОВ 📋</b>\n\n"
 
+    mode = get_setting("relist_mode")
+
     for tg_id, username, first_name, name in users:
+
+        shown = get_display_name(
+            tg_id,
+            username,
+            first_name,
+            name,
+            mode
+        )
 
         if tg_id:
 
-            if username:
-                display = (
-                    f'<a href="tg://user?id={tg_id}">'
-                    f'{username}'
-                    f'</a>'
-                )
-            else:
-                display = (
-                    f'<a href="tg://user?id={tg_id}">'
-                    f'{first_name}'
-                    f'</a>'
-                )
+            display = (
+                f'<a href="tg://user?id={tg_id}">'
+                f'{shown}'
+                f'</a>'
+            )
 
         elif username:
 
@@ -1246,7 +1266,7 @@ async def relist(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         else:
 
-            display = "Без юза"
+            display = shown
 
         text += f"{name} | {display}\n"
 
