@@ -194,9 +194,6 @@ def sync_user(user):
 
         rows = cur.fetchall()
 
-        for row in rows:
-            print(f"'{row[0]}'")
-
         matches = []
 
         for row in rows:
@@ -491,7 +488,6 @@ async def reminder_worker(app):
             now = datetime.now(KYIV_TZ)
 
             current_time = now.strftime("%H:%M")
-            print("NOW =", current_time)
             current_date = now.strftime("%Y-%m-%d")
             current_weekday = now.weekday()
 
@@ -507,18 +503,8 @@ async def reminder_worker(app):
             """)
 
             rows = cur.fetchall()
-            print("REMINDERS =", rows)
 
             for rid, chat_id, period, time_str, text, last_sent in rows:
-
-                print(
-                    "CHECK:",
-                    rid,
-                    period,
-                    time_str,
-                    current_time,
-                    last_sent
-                )
 
                 if time_str != current_time:
                     continue
@@ -2301,7 +2287,6 @@ app.add_handler(
 )
 
 async def on_startup(app):
-    print("STARTUP")
     app.create_task(
         reminder_worker(app)
     )
