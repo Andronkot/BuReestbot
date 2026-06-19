@@ -921,6 +921,24 @@ async def plus_nick(update, context):
 
             cur.execute(
                 """
+                SELECT nick
+                FROM users
+                WHERE username=?
+                """,
+                (uid,)
+            )
+
+            row = cur.fetchone()
+
+            if row and row[0] == nick:
+
+                await update.message.reply_text(
+                    "📝 Указан тот же самый ник"
+                )
+                return
+
+            cur.execute(
+                """
                 UPDATE users
                 SET nick=?
                 WHERE username=?
@@ -931,12 +949,30 @@ async def plus_nick(update, context):
             conn.commit()
 
             await update.message.reply_text(
-                "✅ Ник изменён"
+                f"✅ Ник изменён на «{nick}»"
             )
 
             return
 
     username = update.effective_user.username
+
+    cur.execute(
+        """
+        SELECT nick
+        FROM users
+        WHERE username=?
+        """,
+        (username,)
+    )
+
+    row = cur.fetchone()
+
+    if row and row[0] == nick:
+
+        await update.message.reply_text(
+            "📝 Указан тот же самый ник"
+        )
+        return
 
     cur.execute(
         """
@@ -950,7 +986,7 @@ async def plus_nick(update, context):
     conn.commit()
 
     await update.message.reply_text(
-        "✅ Ник сохранён"
+        f"✅ Ник изменён на «{nick}»"
     )
 
 # ---------------- PLUS ID ----------------
@@ -973,6 +1009,24 @@ async def plus_id(update, context):
 
             cur.execute(
                 """
+                SELECT game_id
+                FROM users
+                WHERE username=?
+                """,
+                (uid,)
+            )
+
+            row = cur.fetchone()
+
+            if row and row[0] == gid:
+
+                await update.message.reply_text(
+                    "📝 Указан тот же самый айди"
+                )
+                return
+
+            cur.execute(
+                """
                 UPDATE users
                 SET game_id=?
                 WHERE username=?
@@ -983,12 +1037,30 @@ async def plus_id(update, context):
             conn.commit()
 
             await update.message.reply_text(
-                "✅ Айди изменён"
+                f"✅ Айди изменён на «{gid}»"
             )
 
             return
 
     username = update.effective_user.username
+
+    cur.execute(
+        """
+        SELECT game_id
+        FROM users
+        WHERE username=?
+        """,
+        (username,)
+    )
+
+    row = cur.fetchone()
+
+    if row and row[0] == gid:
+
+        await update.message.reply_text(
+            "📝 Указан тот же самый айди"
+        )
+        return
 
     cur.execute(
         """
@@ -1002,7 +1074,7 @@ async def plus_id(update, context):
     conn.commit()
 
     await update.message.reply_text(
-        "✅ Айди сохранён"
+        f"✅ Айди изменён на «{gid}»"
     )
 
 # ---------------- PRIPISKA ----------------
@@ -1080,7 +1152,7 @@ async def add(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         parts = update.message.text.splitlines()
 
-        if len(parts) < 4:
+        if len(parts) < 3:
             await update.message.reply_text(
                 "❌ Формат:\n\n"
                 "Ад @user\n"
@@ -1620,13 +1692,14 @@ async def sostav(update, context):
     cur.execute(
         """
         SELECT
+            tg_id,
             username,
             first_name,
             name,
             nick,
             game_id
         FROM users
-        ORDER BY name COLLATE NOCASE
+        ORDER BY nick COLLATE NOCASE
         """
     )
 
@@ -1642,20 +1715,39 @@ async def sostav(update, context):
 
     text = "<b>📋 СОСТАВ</b>\n\n"
 
-    for username, first_name, name, nick, gid in rows:
+    for tg_id, username, first_name, name, nick, gid in rows:
 
         if mode == "username":
-            left = (
+
+            shown = (
                 f"@{username}"
                 if username
                 else name
             )
 
         elif mode == "firstname":
-            left = first_name
+
+            shown = first_name
 
         else:
-            left = name
+
+            shown = name
+
+        if tg_id:
+
+            left = (
+                f'<a href="tg://user?id={tg_id}">'
+                f'{shown}'
+                f'</a>'
+            )
+
+        elif username:
+
+            left = f"@{username}"
+
+        else:
+
+            left = shown
 
         text += (
             f"{left} | "
