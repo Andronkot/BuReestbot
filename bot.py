@@ -758,6 +758,34 @@ async def text_commands(update, context: ContextTypes.DEFAULT_TYPE):
     if lower == "напоминалки":
         return await reminders(update, context)
 
+    # УДАЛИТЬ НАП
+
+    if lower.startswith("удалить нап "):
+
+        parts = text.split(maxsplit=2)
+
+        if len(parts) > 2:
+            context.args = [parts[2]]
+        else:
+            context.args = []
+
+        return await del_reminder(update, context)
+
+    # ИЗМЕНИТЬ НАП
+
+    if lower == "изменить нап" or lower.startswith("изменить нап "):
+        return await edit_reminder(update, context)
+
+    # ПЕРИОД НАП
+
+    if lower.startswith("период нап "):
+        return await period_reminder(update, context)
+
+    # ВРЕМЯ НАП
+
+    if lower.startswith("время нап "):
+        return await time_reminder(update, context)
+
     # СЕТ
 
     if lower == "сет" or lower.startswith("сет "):
@@ -1597,14 +1625,301 @@ async def reminders(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     for rid, period, time_str, reminder_text in rows:
 
+        short_text = reminder_text
+
+        if len(short_text) > 50:
+            short_text = short_text[:50] + "..."
+
         text += (
-            f"<b>{rid}.</b> {period} • {time_str}\n"
-            f"💬 {reminder_text}\n\n"
+            f"🆔 {rid}\n"
+            f"📅 {period}\n"
+            f"⏰ {time_str}\n\n"
+            f"💬 {short_text}\n\n"
         )
 
     await update.message.reply_text(
         text,
         parse_mode="HTML"
+    )
+
+# ---------------- DELETE REMINDER ----------------
+
+async def del_reminder(update: Update, context: ContextTypes.DEFAULT_TYPE):
+
+    if not await is_admin(update):
+        return
+
+    if not context.args:
+        await update.message.reply_text(
+            "❌ Укажи ID напоминалки."
+        )
+        return
+
+    try:
+        rid = int(context.args[0])
+    except:
+        await update.message.reply_text(
+            "❌ Неверный ID."
+        )
+        return
+
+    cur.execute(
+        """
+        SELECT id
+        FROM reminders
+        WHERE id=? AND chat_id=?
+        """,
+        (
+            rid,
+            update.effective_chat.id
+        )
+    )
+
+    row = cur.fetchone()
+
+    if not row:
+        await update.message.reply_text(
+            "❌ Напоминалка не найдена."
+        )
+        return
+
+    cur.execute(
+        """
+        DELETE FROM reminders
+        WHERE id=?
+        """,
+        (rid,)
+    )
+
+    conn.commit()
+
+    await update.message.reply_text(
+        f"🗑 Напоминалка 🆔{rid} удалена."
+    )
+
+# ---------------- EDIT REMINDER ----------------
+
+async def edit_reminder(update: Update, context: ContextTypes.DEFAULT_TYPE):
+
+    if not await is_admin(update):
+        return
+
+    first_line = update.message.text.splitlines()[0]
+
+    parts = first_line.split()
+
+    if len(parts) < 3:
+        await update.message.reply_text(
+            "❌ Укажи ID напоминалки."
+        )
+        return
+
+    try:
+        rid = int(parts[2])
+    except:
+        await update.message.reply_text(
+            "❌ Неверный ID."
+        )
+        return
+
+    lines = update.message.text.split("\n", 1)
+
+    if len(lines) < 2:
+        await update.message.reply_text(
+            "❌ Укажи новый текст."
+        )
+        return
+
+    new_text = lines[1].strip()
+
+    cur.execute(
+        """
+        SELECT id
+        FROM reminders
+        WHERE id=? AND chat_id=?
+        """,
+        (
+            rid,
+            update.effective_chat.id
+        )
+    )
+
+    if not cur.fetchone():
+        await update.message.reply_text(
+            "❌ Напоминалка не найдена."
+        )
+        return
+
+    cur.execute(
+        """
+        UPDATE reminders
+        SET text=?
+        WHERE id=?
+        """,
+        (
+            new_text,
+            rid
+        )
+    )
+
+    conn.commit()
+
+    await update.message.reply_text(
+        f"✏️ Напоминалка 🆔{rid} изменена."
+    )
+
+# ---------------- PERIOD REMINDER ----------------
+
+async def period_reminder(update: Update, context: ContextTypes.DEFAULT_TYPE):
+
+    if not await is_admin(update):
+        return
+
+    parts = update.message.text.split()
+
+    if len(parts) < 4:
+        await update.message.reply_text(
+            "❌ Использование:\nПериод нап ID период"
+        )
+        return
+
+    try:
+        rid = int(parts[2])
+    except:
+        await update.message.reply_text(
+            "❌ Неверный ID."
+        )
+        return
+
+    new_period = parts[3].lower()
+
+    valid_periods = [
+        "день",
+        "месяц",
+        "понедельник",
+        "вторник",
+        "среда",
+        "четверг",
+        "пятница",
+        "суббота",
+        "воскресенье"
+    ]
+
+    if new_period not in valid_periods:
+        await update.message.reply_text(
+            "❌ Неверный период."
+        )
+        return
+
+    cur.execute(
+        """
+        SELECT id
+        FROM reminders
+        WHERE id=? AND chat_id=?
+        """,
+        (
+            rid,
+            update.effective_chat.id
+        )
+    )
+
+    if not cur.fetchone():
+        await update.message.reply_text(
+            "❌ Напоминалка не найдена."
+        )
+        return
+
+    cur.execute(
+        """
+        UPDATE reminders
+        SET period=?
+        WHERE id=?
+        """,
+        (
+            new_period,
+            rid
+        )
+    )
+
+    conn.commit()
+
+    await update.message.reply_text(
+        f"📅 Период напоминалки #{rid} изменён на: {new_period}"
+    )
+
+# ---------------- TIME REMINDER ----------------
+
+async def time_reminder(update: Update, context: ContextTypes.DEFAULT_TYPE):
+
+    if not await is_admin(update):
+        return
+
+    parts = update.message.text.split()
+
+    if len(parts) < 4:
+        await update.message.reply_text(
+            "❌ Использование:\nВремя нап ID ЧЧ:ММ"
+        )
+        return
+
+    try:
+        rid = int(parts[2])
+    except:
+        await update.message.reply_text(
+            "❌ Неверный ID."
+        )
+        return
+
+    new_time = parts[3]
+
+    try:
+        hh, mm = new_time.split(":")
+        hh = int(hh)
+        mm = int(mm)
+
+        if hh < 0 or hh > 23 or mm < 0 or mm > 59:
+            raise ValueError
+
+    except:
+        await update.message.reply_text(
+            "❌ Время должно быть в формате ЧЧ:ММ"
+        )
+        return
+
+    cur.execute(
+        """
+        SELECT id
+        FROM reminders
+        WHERE id=? AND chat_id=?
+        """,
+        (
+            rid,
+            update.effective_chat.id
+        )
+    )
+
+    if not cur.fetchone():
+        await update.message.reply_text(
+            "❌ Напоминалка не найдена."
+        )
+        return
+
+    cur.execute(
+        """
+        UPDATE reminders
+        SET time=?
+        WHERE id=?
+        """,
+        (
+            new_time,
+            rid
+        )
+    )
+
+    conn.commit()
+
+    await update.message.reply_text(
+        f"⏰ Время напоминалки #{rid} изменено на: {new_time}"
     )
 
 # ---------------- SET ----------------
