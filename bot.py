@@ -483,6 +483,7 @@ def display_user(username, tg_id, name):
 # REMINDER WORKER
 
 async def reminder_worker(app):
+    print("REMINDER WORKER STARTED")
 
     while True:
 
@@ -2285,7 +2286,8 @@ app.add_handler(
 )
 
 async def on_startup(app):
-    asyncio.create_task(
+    print("STARTUP")
+    app.create_task(
         reminder_worker(app)
     )
 
