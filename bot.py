@@ -829,15 +829,6 @@ async def text_commands(update, context: ContextTypes.DEFAULT_TYPE):
 
         return await ree(update, context)
 
-    # НИК
-    if lower == "ник" or lower.startswith("ник "):
-
-    # АЙДИ
-    if lower == "айди" or lower.startswith("айди "):
-
-    #СОСТАВ
-    if lower == "состав":
-
     # РЕЛИСТ
     if lower == "релист":
         return await relist(update, context)
