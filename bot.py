@@ -44,7 +44,20 @@ CREATE TABLE IF NOT EXISTS settings (
 )
 """)
 
-# ДЕФОЛТНЫЕ НАСТРОЙКИ
+#БД НАПОМИНАЛКИ
+cur.execute("""
+CREATE TABLE IF NOT EXISTS reminders (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    chat_id INTEGER,
+    period TEXT,
+    time TEXT,
+    text TEXT,
+    next_run INTEGER,
+    created_by TEXT
+)
+""")
+
+# ДЕФ НАСТРОЙКИ ОТОБРАЖЕНИЯ
 
 cur.execute(
     "INSERT OR IGNORE INTO settings VALUES (?, ?)",
@@ -528,6 +541,17 @@ async def check_target(update, uid):
 
     return True
 
+# REMINDER DAYS
+DAYS = {
+    "понедельник": 0,
+    "вторник": 1,
+    "среда": 2,
+    "четверг": 3,
+    "пятница": 4,
+    "суббота": 5,
+    "воскресенье": 6
+}
+
 # ---------------- TEXT COMMANDS ----------------
 
 async def text_commands(update, context: ContextTypes.DEFAULT_TYPE):
@@ -713,6 +737,11 @@ async def text_commands(update, context: ContextTypes.DEFAULT_TYPE):
 
     if lower == "реестр":
         return await reestr(update, context)
+
+    # НАПОМИНАЛКА
+
+    if lower == "напоминалка":
+        return await reminder(update, context)
 
     # СЕТ
 
@@ -1278,9 +1307,9 @@ async def myr(update: Update, context: ContextTypes.DEFAULT_TYPE):
     uid = clean(context.args[0]) if context.args else str(update.effective_user.username)
 
     if not user_exists(uid):
-        await update.message.reply_text(
-            "Тебя нету в базе ! \nДобавь себя: Адми Ник"
-        )
+        await update.message.reply_text("Тебя нету в базе. \nИди нахуй !")
+        await asyncio.sleep(2)
+        await msg.edit_text("Тебя нету в базе. \nДобавь себя: Адми Ник")
         return
 
     warns = get_full(uid, "warn")
@@ -1446,6 +1475,68 @@ async def reestr(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         text,
         parse_mode="HTML"
+    )
+
+# ---------------- REMINDER ----------------
+
+async def reminder(update: Update, context: ContextTypes.DEFAULT_TYPE):
+
+    if not await is_admin(update):
+        return
+
+    if len(context.args) < 2:
+        await update.message.reply_text(
+            "❌ Использование:\n\n"
+            "Напоминалка пятница 12:00\n"
+            "Текст напоминания"
+        )
+        return
+
+    period = context.args[0].lower()
+    time_str = context.args[1]
+
+    text = update.message.text.split("\n", 1)
+
+    if len(text) < 2:
+        await update.message.reply_text(
+            "❌ Укажи текст напоминания."
+        )
+        return
+
+    reminder_text = text[1].strip()
+
+    cur.execute(
+        """
+        INSERT INTO reminders
+        (
+            chat_id,
+            period,
+            time,
+            text,
+            next_run,
+            created_by
+        )
+        VALUES (?, ?, ?, ?, ?, ?)
+        """,
+        (
+            update.effective_chat.id,
+            period,
+            time_str,
+            reminder_text,
+            0,
+            str(update.effective_user.id)
+        )
+    )
+
+    conn.commit()
+
+    rid = cur.lastrowid
+
+    await update.message.reply_text(
+        f"✅ Напоминалка создана\n\n"
+        f"ID: {rid}\n"
+        f"Период: {period}\n"
+        f"Время: {time_str}"
     )
 
 # ---------------- SET ----------------
@@ -1706,6 +1797,12 @@ app.add_handler(CommandHandler("myr", myr))
 app.add_handler(CommandHandler("ree", ree))
 app.add_handler(CommandHandler("relist", relist))
 app.add_handler(CommandHandler("reestr", reestr))
+app.add_handler(CommandHandler("nap", reminder))
+app.add_handler(CommandHandler("naps", reminders))
+app.add_handler(CommandHandler("delnap", del_reminder))
+app.add_handler(CommandHandler("editnap", edit_reminder))
+app.add_handler(CommandHandler("periodnap", period_reminder))
+app.add_handler(CommandHandler("timenap", time_reminder))
 app.add_handler(CommandHandler("set", set_cmd))
 app.add_handler(CommandHandler("setting", setting))
 app.add_handler(CommandHandler("comm", comm))
