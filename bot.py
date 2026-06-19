@@ -9,6 +9,9 @@ from telegram.ext import (
     MessageHandler,
     filters
 )
+import asyncio
+from datetime import datetime
+from zoneinfo import ZoneInfo
 
 TOKEN = os.getenv("TOKEN")
 
@@ -53,7 +56,8 @@ CREATE TABLE IF NOT EXISTS reminders (
     time TEXT,
     text TEXT,
     next_run INTEGER,
-    created_by TEXT
+    created_by TEXT,
+    last_sent TEXT
 )
 """)
 
@@ -70,6 +74,19 @@ cur.execute(
 )
 
 conn.commit()
+
+# ЧАСОВОЙ ПОЯС
+KYIV_TZ = ZoneInfo("Europe/Kyiv")
+
+REMINDER_DAYS = {
+    "понедельник": 0,
+    "вторник": 1,
+    "среда": 2,
+    "четверг": 3,
+    "пятница": 4,
+    "суббота": 5,
+    "воскресенье": 6
+}
 
 # ---------------- HELPERS ----------------
 
@@ -462,6 +479,81 @@ def display_user(username, tg_id, name):
         return f"@{username}"
 
     return name
+
+# REMINDER WORKER
+
+async def reminder_worker(app):
+
+    while True:
+
+        try:
+
+            now = datetime.now(KYIV_TZ)
+
+            current_time = now.strftime("%H:%M")
+            current_date = now.strftime("%Y-%m-%d")
+            current_weekday = now.weekday()
+
+            cur.execute("""
+                SELECT
+                    id,
+                    chat_id,
+                    period,
+                    time,
+                    text,
+                    last_sent
+                FROM reminders
+            """)
+
+            rows = cur.fetchall()
+
+            for rid, chat_id, period, time_str, text, last_sent in rows:
+
+                if time_str != current_time:
+                    continue
+
+                if last_sent == current_date:
+                    continue
+
+                send = False
+
+                if period in REMINDER_DAYS:
+
+                    if REMINDER_DAYS[period] == current_weekday:
+                        send = True
+
+                elif period == "день":
+                    send = True
+
+                elif period == "месяц":
+
+                    if now.day == 1:
+                        send = True
+
+                if not send:
+                    continue
+
+                await app.bot.send_message(
+                    chat_id=chat_id,
+                    text=f"<b>⏰ НАПОМИНАНИЕ</b>\n\n{text}",
+                    parse_mode="HTML"
+                )
+
+                cur.execute("""
+                    UPDATE reminders
+                    SET last_sent=?
+                    WHERE id=?
+                """, (
+                    current_date,
+                    rid
+                ))
+
+                conn.commit()
+
+        except Exception as e:
+            print("REMINDER ERROR:", e)
+
+        await asyncio.sleep(30)
 
 # ---------------- FORMAT ----------------
 
@@ -1694,7 +1786,7 @@ async def del_reminder(update: Update, context: ContextTypes.DEFAULT_TYPE):
     conn.commit()
 
     await update.message.reply_text(
-        f"🗑 Напоминалка 🆔{rid} удалена."
+        f"🗑 Напоминалка #{rid} удалена."
     )
 
 # ---------------- EDIT REMINDER ----------------
@@ -1765,7 +1857,7 @@ async def edit_reminder(update: Update, context: ContextTypes.DEFAULT_TYPE):
     conn.commit()
 
     await update.message.reply_text(
-        f"✏️ Напоминалка 🆔{rid} изменена."
+        f"✏️ Напоминалка #{rid} изменена."
     )
 
 # ---------------- PERIOD REMINDER ----------------
@@ -2191,5 +2283,12 @@ app.add_handler(
         text_commands
     )
 )
+
+async def on_startup(app):
+    asyncio.create_task(
+        reminder_worker(app)
+    )
+
+app.post_init = on_startup
 
 app.run_polling()
