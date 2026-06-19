@@ -652,38 +652,78 @@ async def text_commands(update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text.strip()
     lower = text.lower()
 
-    # ПЛЮС НИК
+    # +НИК
+
     if lower.startswith("+ник"):
 
-    # ПЛЮС АЙДИ
+        parts = text.split(maxsplit=1)
+
+        if len(parts) > 1:
+            context.args = parts[1].split()
+        else:
+            context.args = []
+
+        return await plus_nick(update, context)
+
+    # +АЙДИ
+
     if lower.startswith("+айди"):
+
+        parts = text.split(maxsplit=1)
+
+        if len(parts) > 1:
+            context.args = parts[1].split()
+        else:
+            context.args = []
+
+        return await plus_id(update, context)
+
+    # НИК
+
+    if lower == "ник" or lower.startswith("ник "):
+
+        parts = text.split(maxsplit=1)
+
+        if len(parts) > 1:
+            context.args = [parts[1]]
+        else:
+            context.args = []
+
+        return await nick(update, context)
+
+    # АЙДИ
+
+    if lower == "айди" or lower.startswith("айди "):
+
+        parts = text.split(maxsplit=1)
+
+        if len(parts) > 1:
+            context.args = [parts[1]]
+        else:
+            context.args = []
+
+        return await game_id(update, context)
+
+    # СОСТАВ
+
+    if lower == "состав":
+        return await sostav(update, context)
+
+
 
     # ПРИПИСКА
     if lower == "приписка":
         return await pripiska(update, context)
 
     # АД
-    if lower.startswith("ад "):
-        parts = text.split(maxsplit=1)
 
-        if len(parts) > 1:
-            context.args = parts[1].split()
-        else:
-            context.args = []
-
+    if lower == "ад" or lower.startswith("ад "):
         return await add(update, context)
 
-    # РЕНЕЙМ
-    if lower == "рен" or lower.startswith("рен "):
-        parts = text.split(maxsplit=1)
+    # АДМИ
 
-        if len(parts) > 1:
-            context.args = parts[1].split()
-        else:
-            context.args = []
-
-        return await rename(update, context)
-
+    if lower == "адми" or lower.startswith("адми"):
+        return await adme(update, context)
 
     # ДЕЛ
     if lower.startswith("дел "):
@@ -978,6 +1018,57 @@ async def plus_id(update, context):
 
 async def pripiska(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("『乃ｙ")
+
+# ---------------- ADME ----------------
+
+async def adme(update: Update, context: ContextTypes.DEFAULT_TYPE):
+
+    parts = update.message.text.splitlines()
+
+    if len(parts) < 3:
+        await update.message.reply_text(
+            "❌ Формат:\n\n"
+            "Адми\n"
+            "Ник\n"
+            "Айди"
+        )
+        return
+
+    nick = parts[1].strip()
+    game_id = parts[2].strip()
+
+    user = update.effective_user
+
+    cur.execute(
+        """
+        INSERT OR REPLACE INTO users
+        (
+            tg_id,
+            username,
+            first_name,
+            name,
+            nick,
+            game_id
+        )
+        VALUES (?, ?, ?, ?, ?, ?)
+        """,
+        (
+            str(user.id),
+            user.username or "",
+            user.first_name or "",
+            nick,
+            nick,
+            game_id
+        )
+    )
+
+    conn.commit()
+
+    await update.message.reply_text(
+        f"✅ Добавлен\n\n"
+        f"🎮 {nick}\n"
+        f"🆔 {game_id}"
+    )
 
 # ---------------- ADD ----------------
 
