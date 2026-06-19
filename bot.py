@@ -948,8 +948,11 @@ async def plus_nick(update, context):
 
             conn.commit()
 
+            old_user = show_user_html(uid)
+
             await update.message.reply_text(
-                f"✅ Ник изменён на «{nick}»"
+                f"✅ Ник {old_user} изменён на «{nick}»",
+                parse_mode="HTML"
             )
 
             return
@@ -1036,8 +1039,11 @@ async def plus_id(update, context):
 
             conn.commit()
 
+            old_user = show_user_html(uid)
+
             await update.message.reply_text(
-                f"✅ Айди изменён на «{gid}»"
+                f"✅ Айди {old_user} изменён на «{gid}»",
+                parse_mode="HTML"
             )
 
             return
