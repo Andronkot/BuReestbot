@@ -25,7 +25,9 @@ CREATE TABLE IF NOT EXISTS users (
     tg_id TEXT,
     username TEXT UNIQUE,
     first_name TEXT,
-    name TEXT
+    name TEXT,
+    nick TEXT,
+    game_id TEXT
 )
 """)
 
@@ -650,13 +652,17 @@ async def text_commands(update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text.strip()
     lower = text.lower()
 
-    # ПРИПИСКА
+    # ПЛЮС НИК
+    if lower.startswith("+ник"):
 
+    # ПЛЮС АЙДИ
+    if lower.startswith("+айди"):
+
+    # ПРИПИСКА
     if lower == "приписка":
         return await pripiska(update, context)
 
     # АД
-
     if lower.startswith("ад "):
         parts = text.split(maxsplit=1)
 
@@ -667,20 +673,7 @@ async def text_commands(update, context: ContextTypes.DEFAULT_TYPE):
 
         return await add(update, context)
 
-    # АДМИ
-
-    if lower == "адми" or lower.startswith("адми "):
-        parts = text.split(maxsplit=1)
-
-        if len(parts) > 1:
-            context.args = [parts[1]]
-        else:
-            context.args = []
-
-        return await adme(update, context)
-
     # РЕНЕЙМ
-
     if lower == "рен" or lower.startswith("рен "):
         parts = text.split(maxsplit=1)
 
@@ -691,20 +684,8 @@ async def text_commands(update, context: ContextTypes.DEFAULT_TYPE):
 
         return await rename(update, context)
 
-    # РЕМИ
-
-    if lower == "реми" or lower.startswith("реми "):
-        parts = text.split(maxsplit=1)
-
-        if len(parts) > 1:
-            context.args = [parts[1]]
-        else:
-            context.args = []
-
-        return await reme(update, context)
 
     # ДЕЛ
-
     if lower.startswith("дел "):
         parts = text.split(maxsplit=1)
 
@@ -716,7 +697,6 @@ async def text_commands(update, context: ContextTypes.DEFAULT_TYPE):
         return await delete(update, context)
 
     # ПРЕД
-
     if lower == "пред" or lower.startswith("пред "):
         parts = text.split(maxsplit=1)
 
@@ -728,7 +708,6 @@ async def text_commands(update, context: ContextTypes.DEFAULT_TYPE):
         return await pred(update, context)
 
     # ПРОЕБ
-
     if lower == "проеб" or lower.startswith("проеб "):
         parts = text.split(maxsplit=1)
 
@@ -740,7 +719,6 @@ async def text_commands(update, context: ContextTypes.DEFAULT_TYPE):
         return await proeb(update, context)
 
     # СНЯТЬ ПРЕДЫ
-
     if lower == "снять преды" or lower.startswith("снять преды "):
         parts = text.split(maxsplit=2)
 
@@ -752,7 +730,6 @@ async def text_commands(update, context: ContextTypes.DEFAULT_TYPE):
         return await unpreds(update, context)
 
     # СНЯТЬ ПРЕД
-
     if lower == "снять пред" or lower.startswith("снять пред "):
         parts = text.split(maxsplit=2)
 
@@ -764,7 +741,6 @@ async def text_commands(update, context: ContextTypes.DEFAULT_TYPE):
         return await unpred(update, context)
 
     # СНЯТЬ ПРОЕБЫ
-
     if lower == "снять проебы" or lower.startswith("снять проебы "):
         parts = text.split(maxsplit=2)
 
@@ -776,7 +752,6 @@ async def text_commands(update, context: ContextTypes.DEFAULT_TYPE):
         return await unproebs(update, context)
 
     # СНЯТЬ ПРОЕБ
-
     if lower == "снять проеб" or lower.startswith("снять проеб "):
         parts = text.split(maxsplit=2)
 
@@ -788,7 +763,6 @@ async def text_commands(update, context: ContextTypes.DEFAULT_TYPE):
         return await unproeb(update, context)
 
     # СТРОНГ
-
     if lower == "стронг" or lower.startswith("стронг "):
         parts = text.split(maxsplit=1)
 
@@ -800,13 +774,11 @@ async def text_commands(update, context: ContextTypes.DEFAULT_TYPE):
         return await strong(update, context)
 
     # МУР
-
     if lower == "мур":
         context.args = []
         return await myr(update, context)
 
     # РЕЕ
-
     if lower == "рее" or lower.startswith("рее "):
         parts = text.split(maxsplit=1)
 
@@ -817,18 +789,24 @@ async def text_commands(update, context: ContextTypes.DEFAULT_TYPE):
 
         return await ree(update, context)
 
-    # РЕЛИСТ
+    # НИК
+    if lower == "ник" or lower.startswith("ник "):
 
+    # АЙДИ
+    if lower == "айди" or lower.startswith("айди "):
+
+    #СОСТАВ
+    if lower == "состав":
+
+    # РЕЛИСТ
     if lower == "релист":
         return await relist(update, context)
 
     # РЕЕСТР
-
     if lower == "реестр":
         return await reestr(update, context)
 
     # НАПОМИНАЛКА
-
     if lower == "напоминалка" or lower.startswith("напоминалка "):
 
         first_line = text.splitlines()[0]
@@ -843,12 +821,10 @@ async def text_commands(update, context: ContextTypes.DEFAULT_TYPE):
         return await reminder(update, context)
 
     # НАПОМИНАЛКИ
-
     if lower == "напоминалки":
         return await reminders(update, context)
 
     # УДАЛИТЬ НАП
-
     if lower.startswith("удалить нап "):
 
         parts = text.split(maxsplit=2)
@@ -861,22 +837,18 @@ async def text_commands(update, context: ContextTypes.DEFAULT_TYPE):
         return await del_reminder(update, context)
 
     # ИЗМЕНИТЬ НАП
-
     if lower == "изменить нап" or lower.startswith("изменить нап "):
         return await edit_reminder(update, context)
 
     # ПЕРИОД НАП
-
     if lower.startswith("период нап "):
         return await period_reminder(update, context)
 
     # ВРЕМЯ НАП
-
     if lower.startswith("время нап "):
         return await time_reminder(update, context)
 
     # СЕТ
-
     if lower == "сет" or lower.startswith("сет "):
         parts = text.split(maxsplit=1)
 
@@ -888,17 +860,119 @@ async def text_commands(update, context: ContextTypes.DEFAULT_TYPE):
         return await set_cmd(update, context)
 
     # СЕТТ
-
     if lower == "сетт":
         context.args = []
         return await setting(update, context)
 
     # КОМ
-
     if lower == "ком":
         return await comm(update, context)
 
 # ---------------- COMMANDS ----------------
+
+# ---------------- PLUS NICK ----------------
+
+async def plus_nick(update, context):
+
+    if not context.args:
+        await update.message.reply_text(
+            "❌ Укажи ник."
+        )
+        return
+
+    nick = " ".join(context.args)
+
+    if await is_admin(update):
+
+        uid = get_target(update, context)
+
+        if uid:
+
+            cur.execute(
+                """
+                UPDATE users
+                SET nick=?
+                WHERE username=?
+                """,
+                (nick, uid)
+            )
+
+            conn.commit()
+
+            await update.message.reply_text(
+                "✅ Ник изменён"
+            )
+
+            return
+
+    username = update.effective_user.username
+
+    cur.execute(
+        """
+        UPDATE users
+        SET nick=?
+        WHERE username=?
+        """,
+        (nick, username)
+    )
+
+    conn.commit()
+
+    await update.message.reply_text(
+        "✅ Ник сохранён"
+    )
+
+# ---------------- PLUS ID ----------------
+
+async def plus_id(update, context):
+
+    if not context.args:
+        await update.message.reply_text(
+            "❌ Укажи айди."
+        )
+        return
+
+    gid = context.args[-1]
+
+    if await is_admin(update):
+
+        uid = get_target(update, context)
+
+        if uid:
+
+            cur.execute(
+                """
+                UPDATE users
+                SET game_id=?
+                WHERE username=?
+                """,
+                (gid, uid)
+            )
+
+            conn.commit()
+
+            await update.message.reply_text(
+                "✅ Айди изменён"
+            )
+
+            return
+
+    username = update.effective_user.username
+
+    cur.execute(
+        """
+        UPDATE users
+        SET game_id=?
+        WHERE username=?
+        """,
+        (gid, username)
+    )
+
+    conn.commit()
+
+    await update.message.reply_text(
+        "✅ Айди сохранён"
+    )
 
 # ---------------- PRIPISKA ----------------
 
@@ -908,143 +982,71 @@ async def pripiska(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # ---------------- ADD ----------------
 
 async def add(update: Update, context: ContextTypes.DEFAULT_TYPE):
+
     if not await is_admin(update):
         return
 
-    # через реплай
+    target = None
+
     if update.message.reply_to_message:
 
-        if not context.args:
+        target = update.message.reply_to_message.from_user
+
+        parts = update.message.text.splitlines()
+
+    else:
+
+        parts = update.message.text.splitlines()
+
+        if len(parts) < 4:
             await update.message.reply_text(
-                "Укажи ник."
+                "❌ Формат:\n\n"
+                "Ад @user\n"
+                "Ник\n"
+                "Айди"
             )
             return
 
-        user = update.message.reply_to_message.from_user
+        username = parts[0].split(maxsplit=1)[1].replace("@", "")
 
-        tg_id = str(user.id)
-        username = user.username or ""
-        first_name = user.first_name or ""
+        target = None
 
-        cur.execute(
-            """
-            SELECT 1
-            FROM users
-            WHERE tg_id=?
-            """,
-            (tg_id,)
+        try:
+            target_user = await context.bot.get_chat(
+                f"@{username}"
+            )
+            target = target_user
+        except:
+            pass
+
+    if not target:
+        await update.message.reply_text(
+            "❌ Пользователь не найден."
         )
+        return
 
-        if cur.fetchone():
+    if update.message.reply_to_message:
 
+        if len(parts) < 3:
             await update.message.reply_text(
-                "📝 Пользователь был добавлен ранее\n\n"
-                "Повторное добавление не требуется."
+                "❌ Формат:\n\n"
+                "Ад\n"
+                "Ник\n"
+                "Айди"
             )
             return
 
-        name = " ".join(context.args)
+        nick = parts[1].strip()
+        game_id = parts[2].strip()
 
-        cur.execute(
-            """
-            INSERT INTO users
-            (
-                tg_id,
-                username,
-                first_name,
-                name
-            )
-            VALUES (?, ?, ?, ?)
-            """,
-            (
-                tg_id,
-                username,
-                first_name,
-                name
-            )
-        )
+    else:
 
-        conn.commit()
+        nick = parts[1].strip()
+        game_id = parts[2].strip()
 
-        await update.message.reply_text(
-            "<b>👤 Пользователь добавлен</b>",
-            parse_mode="HTML"
-        )
-
-        return
-
-    # через @username
-
-    if len(context.args) < 2:
-        await update.message.reply_text(
-            "Использование:\nАд @user Ник"
-        )
-        return
-
-    username = clean(context.args[0])
-
-    cur.execute(
-        """
-        SELECT 1
-        FROM users
-        WHERE username=?
-        """,
-        (username,)
-    )
-
-    if cur.fetchone():
-
-        await update.message.reply_text(
-            "📝 Пользователь был добавлен ранее\n\n"
-            "Повторное добавление не требуется."
-        )
-        return
-
-    name = " ".join(context.args[1:])
-
-    cur.execute(
-        """
-        INSERT INTO users
-        (
-            tg_id,
-            username,
-            first_name,
-            name
-        )
-        VALUES (?, ?, ?, ?)
-        """,
-        (
-            None,
-            username,
-            None,
-            name
-        )
-    )
-
-    conn.commit()
-
-    await update.message.reply_text(
-        "<b>👤 Пользователь добавлен</b>",
-        parse_mode="HTML"
-    )
-
-# ---------------- ADME ----------------
-
-async def adme(update: Update, context: ContextTypes.DEFAULT_TYPE):
-
-    if not context.args:
-        await update.message.reply_text(
-            "Укажи ник.\nПример: Адми 『乃ｙStarfly"
-        )
-        return
-
-    user = update.effective_user
-
-    tg_id = str(user.id)
-    username = user.username or ""
-    first_name = user.first_name or ""
-
-    name = " ".join(context.args)
+    tg_id = str(target.id)
+    username = target.username or ""
+    first_name = target.first_name or ""
 
     cur.execute(
         """
@@ -1053,90 +1055,28 @@ async def adme(update: Update, context: ContextTypes.DEFAULT_TYPE):
             tg_id,
             username,
             first_name,
-            name
+            name,
+            nick,
+            game_id
         )
-        VALUES (?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?)
         """,
         (
             tg_id,
             username,
             first_name,
-            name
+            nick,
+            nick,
+            game_id
         )
     )
 
     conn.commit()
 
     await update.message.reply_text(
-        "<b>👤 Пользователь добавлен</b>",
-        parse_mode="HTML"
-    )
-# ---------------- RENAME ----------------
-
-async def rename(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if not await is_admin(update):
-        await update.message.reply_text("☝️Ты не админ !")
-        return
-
-    if len(context.args) < 2:
-        return
-
-    uid = clean(context.args[0])
-    new_name = " ".join(context.args[1:])
-
-    cur.execute(
-        "UPDATE users SET name=? WHERE username=?",
-        (new_name, uid)
-    )
-
-    conn.commit()
-
-    await update.message.reply_text(
-        "<b>✏️ Пользователь переименован</b>",
-        parse_mode="HTML"
-    )
-
-# ---------------- REME ----------------
-
-async def reme(update: Update, context: ContextTypes.DEFAULT_TYPE):
-
-    uid = update.effective_user.username
-
-    if not uid:
-        await update.message.reply_text(
-            "У тебя отсутствует username Telegram."
-        )
-        return
-
-    cur.execute(
-        "SELECT 1 FROM users WHERE username=?",
-        (uid,)
-    )
-
-    if not cur.fetchone():
-        await update.message.reply_text(
-            "Сначала добавь себя через команду Адми."
-        )
-        return
-
-    if not context.args:
-        await update.message.reply_text(
-            "Укажи новый ник.\nПример: Реми 『乃ｙStarfly"
-        )
-        return
-
-    new_name = " ".join(context.args)
-
-    cur.execute(
-        "UPDATE users SET name=? WHERE username=?",
-        (new_name, uid)
-    )
-
-    conn.commit()
-
-    await update.message.reply_text(
-        "<b>✏️ Ник изменён</b>",
-        parse_mode="HTML"
+        f"✅ Пользователь добавлен\n\n"
+        f"🎮 {nick}\n"
+        f"🆔 {game_id}"
     )
 
 # ---------------- DEL ----------------
@@ -1542,7 +1482,110 @@ async def relist(update: Update, context: ContextTypes.DEFAULT_TYPE):
         text,
         parse_mode="HTML"
     )
-    
+
+# ---------------- NICK ----------------
+
+async def nick(update, context):
+
+    uid = get_target(update, context)
+
+    if not uid:
+        uid = update.effective_user.username
+
+    cur.execute(
+        """
+        SELECT nick
+        FROM users
+        WHERE username=?
+        """,
+        (uid,)
+    )
+
+    row = cur.fetchone()
+
+    await update.message.reply_text(
+        row[0] if row and row[0] else "Не указан"
+    )
+
+# ---------------- ID ----------------
+
+async def game_id(update, context):
+
+    uid = get_target(update, context)
+
+    if not uid:
+        uid = update.effective_user.username
+
+    cur.execute(
+        """
+        SELECT game_id
+        FROM users
+        WHERE username=?
+        """,
+        (uid,)
+    )
+
+    row = cur.fetchone()
+
+    await update.message.reply_text(
+        row[0] if row and row[0] else "Не указан"
+    )
+
+# ---------------- SOSTAV ----------------
+
+async def sostav(update, context):
+
+    cur.execute(
+        """
+        SELECT
+            username,
+            first_name,
+            name,
+            nick,
+            game_id
+        FROM users
+        ORDER BY name COLLATE NOCASE
+        """
+    )
+
+    rows = cur.fetchall()
+
+    if not rows:
+        await update.message.reply_text(
+            "Состав пуст."
+        )
+        return
+
+    mode = get_setting("os") or "reestr"
+
+    text = "<b>📋 СОСТАВ</b>\n\n"
+
+    for username, first_name, name, nick, gid in rows:
+
+        if mode == "username":
+            left = (
+                f"@{username}"
+                if username
+                else name
+            )
+
+        elif mode == "firstname":
+            left = first_name
+
+        else:
+            left = name
+
+        text += (
+            f"{left} | "
+            f"{nick or '—'} | "
+            f"{gid or '—'}\n"
+        )
+
+    await update.message.reply_text(
+        text,
+        parse_mode="HTML"
+    )
+
 # ---------------- REESTR ----------------
 
 async def reestr(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -2259,9 +2302,6 @@ app = ApplicationBuilder().token(TOKEN).build()
 
 app.add_handler(CommandHandler("pripiska", pripiska))
 app.add_handler(CommandHandler("add", add))
-app.add_handler(CommandHandler("adme", adme))
-app.add_handler(CommandHandler("rename", rename))
-app.add_handler(CommandHandler("reme", reme))
 app.add_handler(CommandHandler("del", delete))
 app.add_handler(CommandHandler("pred", pred))
 app.add_handler(CommandHandler("proeb", proeb))
@@ -2274,7 +2314,6 @@ app.add_handler(CommandHandler("myr", myr))
 app.add_handler(CommandHandler("ree", ree))
 app.add_handler(CommandHandler("relist", relist))
 app.add_handler(CommandHandler("reestr", reestr))
-
 app.add_handler(CommandHandler("set", set_cmd))
 app.add_handler(CommandHandler("setting", setting))
 app.add_handler(CommandHandler("comm", comm))
