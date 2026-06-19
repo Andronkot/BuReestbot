@@ -1641,6 +1641,9 @@ async def reminder(update: Update, context: ContextTypes.DEFAULT_TYPE):
     period = context.args[0].lower()
     time_str = context.args[1]
 
+    hh, mm = time_str.split(":")
+    time_str = f"{int(hh):02d}:{int(mm):02d}"
+
     if period not in [
         "день",
         "месяц",
@@ -2006,6 +2009,8 @@ async def time_reminder(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "❌ Напоминалка не найдена."
         )
         return
+
+    new_time = f"{hh:02d}:{mm:02d}"
 
     cur.execute(
         """
