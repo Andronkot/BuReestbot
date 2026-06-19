@@ -511,6 +511,23 @@ def fmt_proeb_full(proebs):
 
     return text
 
+# ЧЕККЕР УКАЗАН ИЛИ ИМЕЕТСЯ В БАЗЕ ПОЛЬЗОВАТЕЛЬ
+async def check_target(update, uid):
+
+    if not uid:
+        await update.message.reply_text(
+            "👤 Укажи пользователя или ответь на его сообщение."
+        )
+        return False
+
+    if not user_exists(uid):
+        await update.message.reply_text(
+            "❌ Пользователь не найден в реестре."
+        )
+        return False
+
+    return True
+
 # ---------------- TEXT COMMANDS ----------------
 
 async def text_commands(update, context: ContextTypes.DEFAULT_TYPE):
@@ -856,7 +873,7 @@ async def adme(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if not context.args:
         await update.message.reply_text(
-            "Укажи ник.\nПример: Адми Иван"
+            "Укажи ник.\nПример: Адми 『乃ｙStarfly"
         )
         return
 
@@ -943,7 +960,7 @@ async def reme(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if not context.args:
         await update.message.reply_text(
-            "Укажи новый ник.\nПример: реми Вася"
+            "Укажи новый ник.\nПример: Реми 『乃ｙStarfly"
         )
         return
 
@@ -1002,16 +1019,8 @@ async def pred(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     uid = get_target(update, context)
-    if not uid or not user_exists(uid):
-        await update.message.reply_text(
-            "❌ Пользователь не найден в реестре"
-        )
-        return
 
-    if not uid:
-        await update.message.reply_text(
-            "Укажи пользователя или ответь на сообщение."
-        )
+    if not await check_target(update, uid):
         return
 
     if update.message.reply_to_message:
@@ -1046,16 +1055,8 @@ async def proeb(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     uid = get_target(update, context)
-    if not uid or not user_exists(uid):
-        await update.message.reply_text(
-            "❌ Пользователь не найден в реестре"
-        )
-        return
 
-    if not uid:
-        await update.message.reply_text(
-            "Укажи пользователя или ответь на сообщение."
-        )
+    if not await check_target(update, uid):
         return
 
     if update.message.reply_to_message:
@@ -1092,16 +1093,8 @@ async def unpred(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     uid = get_target(update, context)
-    if not uid or not user_exists(uid):
-        await update.message.reply_text(
-            "❌ Пользователь не найден в реестре"
-        )
-        return
 
-    if not uid:
-        await update.message.reply_text(
-            "Укажи пользователя или ответь на сообщение."
-        )
+    if not await check_target(update, uid):
         return
 
     warns = get(uid, "warn")
@@ -1148,16 +1141,8 @@ async def unproeb(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     uid = get_target(update, context)
-    if not uid or not user_exists(uid):
-        await update.message.reply_text(
-            "❌ Пользователь не найден в реестре"
-        )
-        return
 
-    if not uid:
-        await update.message.reply_text(
-            "Укажи пользователя или ответь на сообщение."
-        )
+    if not await check_target(update, uid):
         return
 
     proebs = get(uid, "proeb")
@@ -1236,16 +1221,8 @@ async def strong(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     uid = get_target(update, context)
-    if not uid or not user_exists(uid):
-        await update.message.reply_text(
-            "❌ Пользователь не найден в реестре"
-        )
-        return
 
-    if not uid:
-        await update.message.reply_text(
-            "Укажи пользователя или ответь на сообщение."
-        )
+    if not await check_target(update, uid):
         return
 
     warns = get(uid, "warn")
@@ -1302,7 +1279,7 @@ async def myr(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if not user_exists(uid):
         await update.message.reply_text(
-            "❌ Пользователь не найден в реестре"
+            "Тебя нету в базе ! \nДобавь себя: Адми Ник"
         )
         return
 
@@ -1330,16 +1307,8 @@ async def myr(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def ree(update: Update, context: ContextTypes.DEFAULT_TYPE):
     uid = get_target(update, context)
-    if not uid or not user_exists(uid):
-        await update.message.reply_text(
-            "❌ Пользователь не найден в реестре"
-        )
-        return
 
-    if not uid:
-        await update.message.reply_text(
-            "Укажи пользователя или ответь на сообщение."
-        )
+    if not await check_target(update, uid):
         return
 
     warns = get_full(uid, "warn")
