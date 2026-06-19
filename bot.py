@@ -740,7 +740,17 @@ async def text_commands(update, context: ContextTypes.DEFAULT_TYPE):
 
     # НАПОМИНАЛКА
 
-    if lower == "напоминалка":
+    if lower == "напоминалка" or lower.startswith("напоминалка "):
+
+        parts = text.split(maxsplit=2)
+
+        if len(parts) > 2:
+            context.args = [parts[1], parts[2]]
+        elif len(parts) > 1:
+            context.args = [parts[1]]
+        else:
+            context.args = []
+
         return await reminder(update, context)
 
     # СЕТ
@@ -1480,6 +1490,9 @@ async def reestr(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # ---------------- REMINDER ----------------
 
 async def reminder(update: Update, context: ContextTypes.DEFAULT_TYPE):
+
+    await update.message.reply_text("TEST")
+    return
 
     if not await is_admin(update):
         return
