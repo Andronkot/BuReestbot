@@ -2408,7 +2408,7 @@ app.add_handler(
 )
 
 async def on_startup(app):
-    app.create_task(
+    asyncio.create_task(
         reminder_worker(app)
     )
 
