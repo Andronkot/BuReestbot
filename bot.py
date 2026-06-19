@@ -742,16 +742,21 @@ async def text_commands(update, context: ContextTypes.DEFAULT_TYPE):
 
     if lower == "напоминалка" or lower.startswith("напоминалка "):
 
-        parts = text.split(maxsplit=2)
+        first_line = text.splitlines()[0]
 
-        if len(parts) > 2:
+        parts = first_line.split()
+
+        if len(parts) >= 3:
             context.args = [parts[1], parts[2]]
-        elif len(parts) > 1:
-            context.args = [parts[1]]
         else:
             context.args = []
 
         return await reminder(update, context)
+
+    # НАПОМИНАЛКИ
+
+    if lower == "напоминалки":
+        return await reminders(update, context)
 
     # СЕТ
 
@@ -1564,6 +1569,42 @@ async def reminder(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"📅 {period}\n"
         f"⏰ {time_str}\n\n"
         f"💬 {reminder_text}"
+    )
+
+# ---------------- REMINDERS ----------------
+
+async def reminders(update: Update, context: ContextTypes.DEFAULT_TYPE):
+
+    if not await is_admin(update):
+        return
+
+    cur.execute("""
+        SELECT id, period, time, text
+        FROM reminders
+        WHERE chat_id=?
+        ORDER BY id
+    """, (update.effective_chat.id,))
+
+    rows = cur.fetchall()
+
+    if not rows:
+        await update.message.reply_text(
+            "📭 Напоминалок нет."
+        )
+        return
+
+    text = "<b>⏰ НАПОМИНАЛКИ</b>\n\n"
+
+    for rid, period, time_str, reminder_text in rows:
+
+        text += (
+            f"<b>{rid}.</b> {period} • {time_str}\n"
+            f"💬 {reminder_text}\n\n"
+        )
+
+    await update.message.reply_text(
+        text,
+        parse_mode="HTML"
     )
 
 # ---------------- SET ----------------
