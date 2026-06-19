@@ -1491,9 +1491,6 @@ async def reestr(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def reminder(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
-    await update.message.reply_text("TEST")
-    return
-
     if not await is_admin(update):
         return
 
@@ -1508,15 +1505,31 @@ async def reminder(update: Update, context: ContextTypes.DEFAULT_TYPE):
     period = context.args[0].lower()
     time_str = context.args[1]
 
-    text = update.message.text.split("\n", 1)
+    if period not in [
+        "день",
+        "месяц",
+        "понедельник",
+        "вторник",
+        "среда",
+        "четверг",
+        "пятница",
+        "суббота",
+        "воскресенье"
+    ]:
+        await update.message.reply_text(
+            "❌ Неверный период."
+        )
+        return
 
-    if len(text) < 2:
+    parts = update.message.text.split("\n", 1)
+
+    if len(parts) < 2:
         await update.message.reply_text(
             "❌ Укажи текст напоминания."
         )
         return
 
-    reminder_text = text[1].strip()
+    reminder_text = parts[1].strip()
 
     cur.execute(
         """
@@ -1547,9 +1560,10 @@ async def reminder(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await update.message.reply_text(
         f"✅ Напоминалка создана\n\n"
-        f"ID: {rid}\n"
-        f"Период: {period}\n"
-        f"Время: {time_str}"
+        f"🆔 {rid}\n"
+        f"📅 {period}\n"
+        f"⏰ {time_str}\n\n"
+        f"💬 {reminder_text}"
     )
 
 # ---------------- SET ----------------
