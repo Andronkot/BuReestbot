@@ -670,11 +670,9 @@ async def text_commands(update, context: ContextTypes.DEFAULT_TYPE):
     sync_user(update.effective_user)
 
     text = update.message.text.strip()
-    lower = text.lower()
-
-    text = update.message.text.strip()
     first_line = text.splitlines()[0].strip()
     lower = first_line.lower()
+
 
     # АДМИ
 
@@ -710,6 +708,11 @@ async def text_commands(update, context: ContextTypes.DEFAULT_TYPE):
 
         return await plus_id(update, context)
 
+    # СОСТАВ
+
+    if lower == "состав":
+        return await sostav(update, context)
+
     # НИК
 
     if lower == "ник" or lower.startswith("ник "):
@@ -733,11 +736,6 @@ async def text_commands(update, context: ContextTypes.DEFAULT_TYPE):
             context.args = []
 
         return await game_id(update, context)
-
-    # СОСТАВ
-
-    if lower == "состав":
-        return await sostav(update, context)
 
     # ПРИПИСКА
     if lower == "приписка":
@@ -931,20 +929,28 @@ async def plus_nick(update, context):
         )
         return
 
-    user = update.effective_user
-    self_ref = user.username or str(user.id)
-    target_ref = None
+    self_ref = update.effective_user.username or str(update.effective_user.id)
 
-    if await is_admin(update):
-        target_ref = get_target(update, context)
+    target_user = None
+    explicit_target = False
 
-        if target_ref:
-            target_ref = str(target_ref).lstrip("@").strip()
+    if update.message.reply_to_message:
+        target_user = update.message.reply_to_message.from_user
+        target_ref = str(target_user.id)
+        nick_parts = args
 
-            if args and args[0].lstrip("@") == target_ref:
-                args = args[1:]
+    elif await is_admin(update) and len(args) >= 2 and (
+        args[0].startswith("@") or args[0].isdigit()
+    ):
+        explicit_target = True
+        target_ref = args[0].lstrip("@").strip()
+        nick_parts = args[1:]
 
-    nick = " ".join(args).strip()
+    else:
+        target_ref = self_ref
+        nick_parts = args
+
+    nick = " ".join(nick_parts).strip()
 
     if not nick:
         await update.message.reply_text(
@@ -952,71 +958,8 @@ async def plus_nick(update, context):
         )
         return
 
-    if target_ref:
-        ref = target_ref
-        row = _user_row(ref)
-        old_display = show_user_html(ref)
-
-        if row and (row[4] or "") == nick:
-            await update.message.reply_text(
-                "📝 Указан тот же самый ник"
-            )
-            return
-
-        if row:
-            cur.execute(
-                """
-                UPDATE users
-                SET nick=?
-                WHERE tg_id=? OR username=?
-                """,
-                (nick, ref, ref)
-            )
-        else:
-            tg_id = ref if ref.isdigit() else None
-            username = None if ref.isdigit() else ref
-            first_name = user.first_name or "" if ref == self_ref else ""
-
-            cur.execute(
-                """
-                INSERT INTO users
-                (
-                    tg_id,
-                    username,
-                    first_name,
-                    name,
-                    nick,
-                    game_id
-                )
-                VALUES (?, ?, ?, ?, ?, ?)
-                """,
-                (
-                    tg_id,
-                    username,
-                    first_name,
-                    nick,
-                    nick,
-                    ""
-                )
-            )
-
-        conn.commit()
-
-        await update.message.reply_text(
-            f"✅ Ник {old_display} изменён на «{escape(nick)}»",
-            parse_mode="HTML"
-        )
-        return
-
-    row = _user_row(self_ref)
-    ref = self_ref
-
-    if not row and user.username:
-        row = _user_row(str(user.id))
-        if row:
-            ref = str(user.id)
-
-    old_display = show_user_html(ref)
+    row = _user_row(target_ref)
+    old_display = show_user_html(target_ref)
 
     if row and (row[4] or "") == nick:
         await update.message.reply_text(
@@ -1031,9 +974,25 @@ async def plus_nick(update, context):
             SET nick=?
             WHERE tg_id=? OR username=?
             """,
-            (nick, ref, ref)
+            (nick, target_ref, target_ref)
         )
     else:
+        if target_user:
+            tg_id = str(target_user.id)
+            username = target_user.username or ""
+            first_name = target_user.first_name or ""
+            name = target_user.first_name or target_user.username or nick
+        elif target_ref.isdigit():
+            tg_id = target_ref
+            username = ""
+            first_name = ""
+            name = nick
+        else:
+            tg_id = ""
+            username = target_ref
+            first_name = update.effective_user.first_name or ""
+            name = first_name or target_ref or nick
+
         cur.execute(
             """
             INSERT INTO users
@@ -1048,10 +1007,10 @@ async def plus_nick(update, context):
             VALUES (?, ?, ?, ?, ?, ?)
             """,
             (
-                str(user.id),
-                user.username,
-                user.first_name or "",
-                nick,
+                tg_id,
+                username,
+                first_name,
+                name,
                 nick,
                 ""
             )
@@ -1076,20 +1035,26 @@ async def plus_id(update, context):
         )
         return
 
-    user = update.effective_user
-    self_ref = user.username or str(user.id)
-    target_ref = None
+    self_ref = update.effective_user.username or str(update.effective_user.id)
 
-    if await is_admin(update):
-        target_ref = get_target(update, context)
+    target_user = None
 
-        if target_ref:
-            target_ref = str(target_ref).lstrip("@").strip()
+    if update.message.reply_to_message:
+        target_user = update.message.reply_to_message.from_user
+        target_ref = str(target_user.id)
+        id_parts = args
 
-            if args and args[0].lstrip("@") == target_ref:
-                args = args[1:]
+    elif await is_admin(update) and len(args) >= 2 and (
+        args[0].startswith("@") or args[0].isdigit()
+    ):
+        target_ref = args[0].lstrip("@").strip()
+        id_parts = args[1:]
 
-    gid = args[-1].strip()
+    else:
+        target_ref = self_ref
+        id_parts = args
+
+    gid = " ".join(id_parts).strip()
 
     if not gid:
         await update.message.reply_text(
@@ -1097,71 +1062,8 @@ async def plus_id(update, context):
         )
         return
 
-    if target_ref:
-        ref = target_ref
-        row = _user_row(ref)
-        old_display = show_user_html(ref)
-
-        if row and (row[5] or "") == gid:
-            await update.message.reply_text(
-                "📝 Указан тот же самый айди"
-            )
-            return
-
-        if row:
-            cur.execute(
-                """
-                UPDATE users
-                SET game_id=?
-                WHERE tg_id=? OR username=?
-                """,
-                (gid, ref, ref)
-            )
-        else:
-            tg_id = ref if ref.isdigit() else None
-            username = None if ref.isdigit() else ref
-            first_name = user.first_name or "" if ref == self_ref else ""
-
-            cur.execute(
-                """
-                INSERT INTO users
-                (
-                    tg_id,
-                    username,
-                    first_name,
-                    name,
-                    nick,
-                    game_id
-                )
-                VALUES (?, ?, ?, ?, ?, ?)
-                """,
-                (
-                    tg_id,
-                    username,
-                    first_name,
-                    "",
-                    "",
-                    gid
-                )
-            )
-
-        conn.commit()
-
-        await update.message.reply_text(
-            f"✅ Айди {old_display} изменён на «{escape(gid)}»",
-            parse_mode="HTML"
-        )
-        return
-
-    row = _user_row(self_ref)
-    ref = self_ref
-
-    if not row and user.username:
-        row = _user_row(str(user.id))
-        if row:
-            ref = str(user.id)
-
-    old_display = show_user_html(ref)
+    row = _user_row(target_ref)
+    old_display = show_user_html(target_ref)
 
     if row and (row[5] or "") == gid:
         await update.message.reply_text(
@@ -1176,9 +1078,25 @@ async def plus_id(update, context):
             SET game_id=?
             WHERE tg_id=? OR username=?
             """,
-            (gid, ref, ref)
+            (gid, target_ref, target_ref)
         )
     else:
+        if target_user:
+            tg_id = str(target_user.id)
+            username = target_user.username or ""
+            first_name = target_user.first_name or ""
+            name = target_user.first_name or target_user.username or ""
+        elif target_ref.isdigit():
+            tg_id = target_ref
+            username = ""
+            first_name = ""
+            name = ""
+        else:
+            tg_id = ""
+            username = target_ref
+            first_name = update.effective_user.first_name or ""
+            name = first_name or target_ref or ""
+
         cur.execute(
             """
             INSERT INTO users
@@ -1193,10 +1111,10 @@ async def plus_id(update, context):
             VALUES (?, ?, ?, ?, ?, ?)
             """,
             (
-                str(user.id),
-                user.username,
-                user.first_name or "",
-                "",
+                tg_id,
+                username,
+                first_name,
+                name,
                 "",
                 gid
             )
@@ -1844,24 +1762,27 @@ async def sostav(update, context):
     for tg_id, username, first_name, name, nick, gid in rows:
 
         if mode == "username":
-            shown = f"@{username}" if username else (name or first_name or "—")
+            shown = username or name or first_name or "—"
+            shown = f"@{shown}" if username else shown
+
         elif mode == "firstname":
             shown = first_name or username or name or "—"
+
         else:
             shown = name or first_name or username or "—"
 
+        shown = escape(shown)
+        nick = escape(nick or "—")
+        gid = escape(gid or "—")
+
         if tg_id:
-            left = f'<a href="tg://user?id={tg_id}">{escape(shown)}</a>'
+            left = f'<a href="tg://user?id={tg_id}">{shown}</a>'
         elif username:
             left = f"@{escape(username)}"
         else:
-            left = escape(shown)
+            left = shown
 
-        text += (
-            f"{left} | "
-            f"{escape(nick or '—')} | "
-            f"{escape(gid or '—')}\n"
-        )
+        text += f"{left} | {nick} | {gid}\n"
 
     await update.message.reply_text(
         text,
