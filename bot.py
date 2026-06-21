@@ -475,6 +475,25 @@ def sort_users(users):
         key=sort_key
     )
 
+# GET TARGET
+
+def get_target(update, context):
+
+    if update.message.reply_to_message:
+
+        user = update.message.reply_to_message.from_user
+
+        return (
+            user.username
+            or str(user.id)
+        )
+
+    if context.args:
+
+        return context.args[0].replace("@", "")
+
+    return None
+
 # DISPLAY USER
 
 def display_user(username, tg_id, name):
@@ -567,6 +586,39 @@ async def reminder_worker(app):
             print("REMINDER ERROR:", e)
 
         await asyncio.sleep(30)
+
+# ---------------- ОВЧАРКА ----------------
+
+def german_shepherd_guard():
+
+    required = [
+        "get_target",
+        "show_user_html",
+        "sort_users",
+        "sort_sostav"
+    ]
+
+    missing = []
+
+    for name in required:
+
+        if name not in globals():
+            missing.append(name)
+
+    if missing:
+
+        print(
+            "🐕 ГАВ ГАВ ГАВ! СПИЗДИЛИ ХЕЛПЕРЫ:"
+        )
+
+        for item in missing:
+            print(f"🚨 {item}")
+
+    else:
+
+        print(
+            "🐕 Всё на месте, хозяин."
+        )
 
 # ---------------- FORMAT ----------------
 
@@ -1791,40 +1843,36 @@ async def sostav(update, context):
     rows = sort_sostav(cur.fetchall())
 
     if not rows:
-        await update.message.reply_text("Состав пуст.")
+        await update.message.reply_text(
+            "Состав пуст."
+        )
         return
-
-    mode = get_setting("os") or "reestr"
 
     text = "<b>📋 СОСТАВ</b>\n\n"
 
     for tg_id, username, first_name, name, nick, gid in rows:
 
-        if mode == "username":
-            shown = username or name or first_name or "—"
-            shown = f"@{shown}" if username else shown
+        uid = username if username else tg_id
 
-        elif mode == "firstname":
-            shown = first_name or username or name or "—"
-
+        if uid:
+            left = show_user_html(uid)
         else:
-            shown = name or first_name or username or "—"
+            left = escape(name or first_name or "—")
 
-        shown = escape(shown)
         nick = escape(nick or "—")
         gid = escape(gid or "—")
 
-        if tg_id:
-            left = f'<a href="tg://user?id={tg_id}">{shown}</a>'
-        elif username:
-            left = f"@{escape(username)}"
-        else:
-            left = shown
+        text += (
+            f"{left} | "
+            f"{nick} | "
+            f"{gid}\n"
+        )
 
-        text += f"{left} | {nick} | {gid}\n"
-
-    await update.message.reply_text(text, parse_mode="HTML")
-
+    await update.message.reply_text(
+        text,
+        parse_mode="HTML",
+        disable_web_page_preview=True
+    )
 # ---------------- REESTR ----------------
 
 async def reestr(update: Update, context: ContextTypes.DEFAULT_TYPE):
