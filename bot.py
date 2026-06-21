@@ -16,6 +16,9 @@ from html import escape
 
 TOKEN = os.getenv("TOKEN")
 
+
+BACKUP_PASSWORD = "774847"
+
 os.makedirs("/data", exist_ok=True)
 
 conn = sqlite3.connect(
@@ -980,6 +983,21 @@ async def text_commands(update, context: ContextTypes.DEFAULT_TYPE):
 
     if lower == "ком":
         return await comm(update, context)
+
+    # ---------------- БЕКАП ----------------
+
+    #БЕКАП
+
+    if lower == "бекап" or lower.startswith("бекап "):
+
+        parts = first_line.split(maxsplit=1)
+
+        if len(parts) > 1:
+            context.args = [parts[1]]
+        else:
+            context.args = []
+
+        return await backup(update, context)
 
 # ---------------- COMMANDS ----------------
 
@@ -2607,6 +2625,33 @@ async def comm(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         text,
         parse_mode="HTML"
+    )
+
+# ---------------- BACKUP ----------------
+
+
+async def backup(update, context):
+
+    if update.effective_chat.type != "private":
+        return
+
+    if not context.args:
+        await update.message.reply_text(
+            "❌ Укажи пароль"
+        )
+        return
+
+    password = context.args[0]
+
+    if password != BACKUP_PASSWORD:
+        await update.message.reply_text(
+            "❌ Неверный пароль"
+        )
+        return
+
+    await update.message.reply_document(
+        document=open("/data/bot.db", "rb"),
+        filename="bot.db"
     )
 
 # ---------------- APP ----------------
