@@ -16,9 +16,17 @@ from html import escape
 
 TOKEN = os.getenv("TOKEN")
 
-conn = sqlite3.connect("bot.db", check_same_thread=False)
-cur = conn.cursor()
+os.makedirs("/data", exist_ok=True)
 
+conn = sqlite3.connect(
+    "/data/bot.db",
+    check_same_thread=False
+)
+
+conn.execute("PRAGMA journal_mode=WAL")
+conn.execute("PRAGMA synchronous=NORMAL")
+
+cur = conn.cursor()
 # ---------------- DB ----------------
 
 cur.execute("""
