@@ -338,7 +338,6 @@ def show_user(uid):
     )
 
 def show_user_html(uid):
-
     cur.execute("""
         SELECT tg_id, username, first_name, name
         FROM users
@@ -348,14 +347,15 @@ def show_user_html(uid):
     row = cur.fetchone()
 
     if not row:
+        uid = str(uid).lstrip("@").strip()
+        if uid and not uid.isdigit():
+            return f"@{uid}"
         return uid
 
     tg_id, username, first_name, name = row
-
-    shown = show_user(uid)
+    shown = escape(show_user(uid))
 
     if tg_id:
-
         return (
             f'<a href="tg://user?id={tg_id}">'
             f'{shown}'
@@ -363,45 +363,39 @@ def show_user_html(uid):
         )
 
     if username:
-        return f"@{username}"
+        return f"@{escape(username)}"
 
-    return name or shown
+    return escape(name or show_user(uid))
 
-def clean(u):
-    return u.replace("@", "").strip()
+# СОРТИРОВКА ДЛЯ СОСТАВА
+def sort_sostav(rows):
 
-def get_target(update, context):
+    def sort_key(row):
+        tg_id, username, first_name, name, nick, game_id = row
+        value = (nick or name or username or "").strip()
 
-    if update.message.reply_to_message:
+        if not value:
+            return (9, "")
 
-        user = update.message.reply_to_message.from_user
+        pos = value.find("ｙ")
 
-        tg_id = str(user.id)
+        if pos != -1 and pos + 1 < len(value):
+            ch = value[pos + 1]
 
-        cur.execute(
-            """
-            SELECT username
-            FROM users
-            WHERE tg_id=?
-            """,
-            (tg_id,)
-        )
+            if (
+                ("a" <= ch.lower() <= "z")
+                or
+                ("а" <= ch.lower() <= "я")
+            ):
+                return (0, ch.lower(), value.lower())
 
-        row = cur.fetchone()
+            return (1, value.lower())
 
-        if row and row[0]:
-            return row[0]
+        return (2, value.lower())
 
-        if user.username:
-            return user.username
+    return sorted(rows, key=sort_key)
 
-        return tg_id
-
-    if context.args:
-        return clean(context.args[0])
-
-    return None
-
+# ПРОВЕРКА АДМИН ИЛИ НЕТ
 async def is_admin(update: Update):
     admins = await update.effective_chat.get_administrators()
     return any(a.user.id == update.effective_user.id for a in admins)
@@ -673,6 +667,7 @@ async def text_commands(update, context: ContextTypes.DEFAULT_TYPE):
     first_line = text.splitlines()[0].strip()
     lower = first_line.lower()
 
+    # ---------------- ПОЛЬЗОВАТЕЛИ ----------------
 
     # АДМИ
 
@@ -708,11 +703,6 @@ async def text_commands(update, context: ContextTypes.DEFAULT_TYPE):
 
         return await plus_id(update, context)
 
-    # СОСТАВ
-
-    if lower == "состав":
-        return await sostav(update, context)
-
     # НИК
 
     if lower == "ник" or lower.startswith("ник "):
@@ -737,13 +727,20 @@ async def text_commands(update, context: ContextTypes.DEFAULT_TYPE):
 
         return await game_id(update, context)
 
+    # СОСТАВ
+
+    if lower == "состав":
+        return await sostav(update, context)
+
     # ПРИПИСКА
+
     if lower == "приписка":
         return await pripiska(update, context)
 
     # ДЕЛ
+
     if lower.startswith("дел "):
-        parts = text.split(maxsplit=1)
+        parts = first_line.split(maxsplit=1)
 
         if len(parts) > 1:
             context.args = parts[1].split()
@@ -752,9 +749,12 @@ async def text_commands(update, context: ContextTypes.DEFAULT_TYPE):
 
         return await delete(update, context)
 
+    # ---------------- НАРУШЕНИЯ ----------------
+
     # ПРЕД
+
     if lower == "пред" or lower.startswith("пред "):
-        parts = text.split(maxsplit=1)
+        parts = first_line.split(maxsplit=1)
 
         if len(parts) > 1:
             context.args = parts[1].split()
@@ -764,8 +764,9 @@ async def text_commands(update, context: ContextTypes.DEFAULT_TYPE):
         return await pred(update, context)
 
     # ПРОЕБ
+
     if lower == "проеб" or lower.startswith("проеб "):
-        parts = text.split(maxsplit=1)
+        parts = first_line.split(maxsplit=1)
 
         if len(parts) > 1:
             context.args = parts[1].split()
@@ -774,53 +775,10 @@ async def text_commands(update, context: ContextTypes.DEFAULT_TYPE):
 
         return await proeb(update, context)
 
-    # СНЯТЬ ПРЕДЫ
-    if lower == "снять преды" or lower.startswith("снять преды "):
-        parts = text.split(maxsplit=2)
-
-        if len(parts) > 2:
-            context.args = parts[2].split()
-        else:
-            context.args = []
-
-        return await unpreds(update, context)
-
-    # СНЯТЬ ПРЕД
-    if lower == "снять пред" or lower.startswith("снять пред "):
-        parts = text.split(maxsplit=2)
-
-        if len(parts) > 2:
-            context.args = parts[2].split()
-        else:
-            context.args = []
-
-        return await unpred(update, context)
-
-    # СНЯТЬ ПРОЕБЫ
-    if lower == "снять проебы" or lower.startswith("снять проебы "):
-        parts = text.split(maxsplit=2)
-
-        if len(parts) > 2:
-            context.args = parts[2].split()
-        else:
-            context.args = []
-
-        return await unproebs(update, context)
-
-    # СНЯТЬ ПРОЕБ
-    if lower == "снять проеб" or lower.startswith("снять проеб "):
-        parts = text.split(maxsplit=2)
-
-        if len(parts) > 2:
-            context.args = parts[2].split()
-        else:
-            context.args = []
-
-        return await unproeb(update, context)
-
     # СТРОНГ
+
     if lower == "стронг" or lower.startswith("стронг "):
-        parts = text.split(maxsplit=1)
+        parts = first_line.split(maxsplit=1)
 
         if len(parts) > 1:
             context.args = parts[1].split()
@@ -829,14 +787,66 @@ async def text_commands(update, context: ContextTypes.DEFAULT_TYPE):
 
         return await strong(update, context)
 
+    # СНЯТЬ ПРЕД
+
+    if lower == "снять пред" or lower.startswith("снять пред "):
+        parts = first_line.split(maxsplit=2)
+
+        if len(parts) > 2:
+            context.args = parts[2].split()
+        else:
+            context.args = []
+
+        return await unpred(update, context)
+
+    # СНЯТЬ ПРОЕБ
+
+    if lower == "снять проеб" or lower.startswith("снять проеб "):
+        parts = first_line.split(maxsplit=2)
+
+        if len(parts) > 2:
+            context.args = parts[2].split()
+        else:
+            context.args = []
+
+        return await unproeb(update, context)
+
+    # СНЯТЬ ПРЕДЫ
+
+    if lower == "снять преды" or lower.startswith("снять преды "):
+        parts = first_line.split(maxsplit=2)
+
+        if len(parts) > 2:
+            context.args = parts[2].split()
+        else:
+            context.args = []
+
+        return await unpreds(update, context)
+
+    # СНЯТЬ ПРОЕБЫ
+
+    if lower == "снять проебы" or lower.startswith("снять проебы "):
+        parts = first_line.split(maxsplit=2)
+
+        if len(parts) > 2:
+            context.args = parts[2].split()
+        else:
+            context.args = []
+
+        return await unproebs(update, context)
+
+    # ---------------- РЕЕСТРЫ ----------------
+
     # МУР
+
     if lower == "мур":
         context.args = []
         return await myr(update, context)
 
     # РЕЕ
+
     if lower == "рее" or lower.startswith("рее "):
-        parts = text.split(maxsplit=1)
+        parts = first_line.split(maxsplit=1)
 
         if len(parts) > 1:
             context.args = [parts[1]]
@@ -846,17 +856,20 @@ async def text_commands(update, context: ContextTypes.DEFAULT_TYPE):
         return await ree(update, context)
 
     # РЕЛИСТ
+
     if lower == "релист":
         return await relist(update, context)
 
     # РЕЕСТР
+
     if lower == "реестр":
         return await reestr(update, context)
 
-    # НАПОМИНАЛКА
-    if lower == "напоминалка" or lower.startswith("напоминалка "):
+    # ---------------- НАПОМИНАЛКИ ----------------
 
-        first_line = text.splitlines()[0]
+    # НАПОМИНАЛКА
+
+    if lower == "напоминалка" or lower.startswith("напоминалка "):
 
         parts = first_line.split()
 
@@ -868,13 +881,30 @@ async def text_commands(update, context: ContextTypes.DEFAULT_TYPE):
         return await reminder(update, context)
 
     # НАПОМИНАЛКИ
+
     if lower == "напоминалки":
         return await reminders(update, context)
 
+    # ИЗМЕНИТЬ НАП
+
+    if lower == "изменить нап" or lower.startswith("изменить нап "):
+        return await edit_reminder(update, context)
+
+    # ПЕРИОД НАП
+
+    if lower.startswith("период нап "):
+        return await period_reminder(update, context)
+
+    # ВРЕМЯ НАП
+
+    if lower.startswith("время нап "):
+        return await time_reminder(update, context)
+
     # УДАЛИТЬ НАП
+
     if lower.startswith("удалить нап "):
 
-        parts = text.split(maxsplit=2)
+        parts = first_line.split(maxsplit=2)
 
         if len(parts) > 2:
             context.args = [parts[2]]
@@ -883,21 +913,12 @@ async def text_commands(update, context: ContextTypes.DEFAULT_TYPE):
 
         return await del_reminder(update, context)
 
-    # ИЗМЕНИТЬ НАП
-    if lower == "изменить нап" or lower.startswith("изменить нап "):
-        return await edit_reminder(update, context)
-
-    # ПЕРИОД НАП
-    if lower.startswith("период нап "):
-        return await period_reminder(update, context)
-
-    # ВРЕМЯ НАП
-    if lower.startswith("время нап "):
-        return await time_reminder(update, context)
+    # ---------------- НАСТРОЙКИ ----------------
 
     # СЕТ
+
     if lower == "сет" or lower.startswith("сет "):
-        parts = text.split(maxsplit=1)
+        parts = first_line.split(maxsplit=1)
 
         if len(parts) > 1:
             context.args = parts[1].split()
@@ -907,11 +928,15 @@ async def text_commands(update, context: ContextTypes.DEFAULT_TYPE):
         return await set_cmd(update, context)
 
     # СЕТТ
+
     if lower == "сетт":
         context.args = []
         return await setting(update, context)
 
+    # ---------------- СПРАВКА ----------------
+
     # КОМ
+
     if lower == "ком":
         return await comm(update, context)
 
@@ -988,10 +1013,10 @@ async def plus_nick(update, context):
             first_name = ""
             name = nick
         else:
-            tg_id = ""
-            username = target_ref
+            tg_id = str(update.effective_user.id)
+            username = update.effective_user.username or ""
             first_name = update.effective_user.first_name or ""
-            name = first_name or target_ref or nick
+            name = first_name or username or nick
 
         cur.execute(
             """
@@ -1092,10 +1117,10 @@ async def plus_id(update, context):
             first_name = ""
             name = ""
         else:
-            tg_id = ""
-            username = target_ref
+            tg_id = str(update.effective_user.id)
+            username = update.effective_user.username or ""
             first_name = update.effective_user.first_name or ""
-            name = first_name or target_ref or ""
+            name = first_name or username or ""
 
         cur.execute(
             """
@@ -1574,12 +1599,29 @@ async def strong(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # ---------------- MYR ----------------
 
 async def myr(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    uid = clean(context.args[0]) if context.args else str(update.effective_user.username)
+
+    if context.args:
+
+        uid = clean(context.args[0])
+
+    else:
+
+        uid = (
+            update.effective_user.username
+            or str(update.effective_user.id)
+        )
 
     if not user_exists(uid):
-        await update.message.reply_text("Тебя нету в базе. \nИди нахуй !")
+        await update.message.reply_text(
+            "Тебя нету в базе. \nИди нахуй !"
+        )
+
         await asyncio.sleep(2)
-        await msg.edit_text("Тебя нету в базе. \nДобавь себя: Адми Ник")
+
+        await update.message.reply_text(
+            "Тебя нету в базе. \nДобавь себя: Адми Ник"
+        )
+
         return
 
     warns = get_full(uid, "warn")
@@ -1743,16 +1785,13 @@ async def sostav(update, context):
             nick,
             game_id
         FROM users
-        ORDER BY COALESCE(nick, name, username, '') COLLATE NOCASE
         """
     )
 
-    rows = cur.fetchall()
+    rows = sort_sostav(cur.fetchall())
 
     if not rows:
-        await update.message.reply_text(
-            "Состав пуст."
-        )
+        await update.message.reply_text("Состав пуст.")
         return
 
     mode = get_setting("os") or "reestr"
@@ -1784,10 +1823,7 @@ async def sostav(update, context):
 
         text += f"{left} | {nick} | {gid}\n"
 
-    await update.message.reply_text(
-        text,
-        parse_mode="HTML"
-    )
+    await update.message.reply_text(text, parse_mode="HTML")
 
 # ---------------- REESTR ----------------
 
@@ -2380,24 +2416,39 @@ async def comm(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 <b>👤 Пользователи</b>
 
-<code>Адми Ник</code>
-Добавить себя
+<code>Адми</code>
+Добавить себя в список
 
-<code>Реми @user</code>
-Удалить Telegram привязку
+<code>Ник</code>
+Показать свой ник
+
+<code>Айди</code>
+Показать свой айди
 
 <code>Мур</code>
 Показать свой реестр
+
+<code>Рее @user</code>
+Показать реестр пользователя
+
+<code>Состав</code>
+Показать список участников
+
+<code>Приписка</code>
+Показать приписку
 
 --------------------------------
 
 <b>👥 Управление пользователями</b>
 
-<code>Ад @user Ник</code>
+<code>Ад @user</code>
 Добавить пользователя
 
-<code>Рен @user Новый ник</code>
-Изменить ник реестра
+<code>+Ник @user Ник</code>
+Изменить ник
+
+<code>+Айди @user 123</code>
+Изменить айди
 
 <code>Дел @user</code>
 Удалить пользователя
@@ -2431,14 +2482,33 @@ async def comm(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 <b>📋 Реестры</b>
 
-<code>Рее @user</code>
-Открыть реестр пользователя
-
 <code>Релист</code>
 Список добавленных пользователей
 
 <code>Реестр</code>
 Общий реестр нарушений
+
+--------------------------------
+
+<b>⏰ Напоминания</b>
+
+<code>Напоминалка пятница 12:00</code>
+Создать напоминалку
+
+<code>Напоминалки</code>
+Показать список
+
+<code>Изменить нап 1</code>
+Изменить текст
+
+<code>Период нап 1 пятница</code>
+Изменить период
+
+<code>Время нап 1 12:00</code>
+Изменить время
+
+<code>Удалить нап 1</code>
+Удалить напоминалку
 
 --------------------------------
 
@@ -2457,12 +2527,10 @@ async def comm(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 <b>📖 Прочее</b>
 
-<code>Приписка</code>
-Показать приписку
-
 <code>Комм</code>
 Показать список команд
 """
+
     else:
 
         text = """
@@ -2470,18 +2538,23 @@ async def comm(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 <b>👤 Пользователи</b>
 
-<code>Адми Ник</code>
-Добавить себя
+<code>Адми</code>
+Добавить себя в список
 
-<code>Реми Новый ник</code>
-Изменить свой ник реестра
+<code>Ник</code>
+Показать свой ник
+
+<code>Айди</code>
+Показать свой айди
 
 <code>Мур</code>
 Показать свой реестр
 
 <code>Рее @user</code>
- Открыть реестр пользователя
+Показать реестр пользователя
 
+<code>Состав</code>
+Показать список участников
 
 <code>Приписка</code>
 Показать приписку
@@ -2503,24 +2576,6 @@ async def comm(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 app = ApplicationBuilder().token(TOKEN).build()
 
-app.add_handler(CommandHandler("pripiska", pripiska))
-app.add_handler(CommandHandler("add", add))
-app.add_handler(CommandHandler("del", delete))
-app.add_handler(CommandHandler("pred", pred))
-app.add_handler(CommandHandler("proeb", proeb))
-app.add_handler(CommandHandler("unpred", unpred))
-app.add_handler(CommandHandler("unproeb", unproeb))
-app.add_handler(CommandHandler("unpreds", unpreds))
-app.add_handler(CommandHandler("unproebs", unproebs))
-app.add_handler(CommandHandler("strong", strong))
-app.add_handler(CommandHandler("myr", myr))
-app.add_handler(CommandHandler("ree", ree))
-app.add_handler(CommandHandler("relist", relist))
-app.add_handler(CommandHandler("reestr", reestr))
-app.add_handler(CommandHandler("set", set_cmd))
-app.add_handler(CommandHandler("setting", setting))
-app.add_handler(CommandHandler("comm", comm))
-
 app.add_handler(
     MessageHandler(
         filters.TEXT & ~filters.COMMAND,
@@ -2529,10 +2584,7 @@ app.add_handler(
 )
 
 async def on_startup(app):
-    asyncio.create_task(
-        reminder_worker(app)
-    )
+    asyncio.create_task(reminder_worker(app))
 
 app.post_init = on_startup
-
 app.run_polling()
