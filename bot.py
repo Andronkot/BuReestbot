@@ -110,26 +110,26 @@ REMINDER_DAYS = {
     "воскресенье": 6
 }
 
+
 # ---------------- HELPERS ----------------
 
-# ЧЕККЕР ДОБАВЛЕНИЯ ПОЛЬЗОВАТЕЛЯ В БД
-def user_exists(uid):
+# USERS
 
+def user_exists(uid):
     cur.execute(
         """
         SELECT 1
         FROM users
-        WHERE username=? OR tg_id=?
+        WHERE username = ?
+           OR tg_id = ?
         """,
         (uid, uid)
     )
 
     return cur.fetchone() is not None
 
-# SYNC USER
 
 def sync_user(user):
-
     tg_id = str(user.id)
     username = user.username or ""
     first_name = user.first_name or ""
@@ -140,7 +140,7 @@ def sync_user(user):
         """
         SELECT username
         FROM users
-        WHERE tg_id=?
+        WHERE tg_id = ?
         """,
         (tg_id,)
     )
@@ -148,14 +148,12 @@ def sync_user(user):
     row = cur.fetchone()
 
     if row:
-
         cur.execute(
             """
             UPDATE users
-            SET
-                username=?,
+            SET username=?,
                 first_name=?
-            WHERE tg_id=?
+            WHERE tg_id = ?
             """,
             (
                 username,
@@ -175,7 +173,7 @@ def sync_user(user):
             """
             SELECT username
             FROM users
-            WHERE username=?
+            WHERE username = ?
             """,
             (username,)
         )
@@ -183,14 +181,12 @@ def sync_user(user):
         row = cur.fetchone()
 
         if row:
-
             cur.execute(
                 """
                 UPDATE users
-                SET
-                    tg_id=?,
+                SET tg_id=?,
                     first_name=?
-                WHERE username=?
+                WHERE username = ?
                 """,
                 (
                     tg_id,
@@ -226,18 +222,15 @@ def sync_user(user):
                 continue
 
             if stored_username.lower() == first_name.lower():
-
                 matches.append(stored_username)
 
         if len(matches) == 1:
-
             cur.execute(
                 """
                 UPDATE users
-                SET
-                    tg_id=?,
+                SET tg_id=?,
                     first_name=?
-                WHERE username=?
+                WHERE username = ?
                 """,
                 (
                     tg_id,
@@ -249,10 +242,10 @@ def sync_user(user):
             conn.commit()
             return
 
+
 # SETTINGS
 
 def get_setting(key):
-
     cur.execute(
         "SELECT value FROM settings WHERE key=?",
         (key,)
@@ -277,7 +270,6 @@ def get_setting(key):
 
 
 def set_setting(key, value):
-
     cur.execute(
         """
         INSERT OR REPLACE INTO settings
@@ -288,16 +280,16 @@ def set_setting(key, value):
 
     conn.commit()
 
+
 # DISPLAY NAME
 
 def get_display_name(
-    tg_id,
-    username,
-    first_name,
-    name,
-    mode
+        tg_id,
+        username,
+        first_name,
+        name,
+        mode
 ):
-
     if mode == "reestr":
         return name
 
@@ -306,13 +298,14 @@ def get_display_name(
 
     return username or first_name or name
 
-def get_display_user(uid, mode):
 
+def get_display_user(uid, mode):
     cur.execute("""
-        SELECT tg_id, username, first_name, name
-        FROM users
-        WHERE username=? OR tg_id=?
-    """, (uid, uid))
+                SELECT tg_id, username, first_name, name
+                FROM users
+                WHERE username = ?
+                   OR tg_id = ?
+                """, (uid, uid))
 
     row = cur.fetchone()
 
@@ -331,18 +324,19 @@ def get_display_user(uid, mode):
 
 
 def show_user(uid):
-
     return get_display_user(
         uid,
         get_setting("display_mode")
     )
 
+
 def show_user_html(uid):
     cur.execute("""
-        SELECT tg_id, username, first_name, name
-        FROM users
-        WHERE username=? OR tg_id=?
-    """, (uid, uid))
+                SELECT tg_id, username, first_name, name
+                FROM users
+                WHERE username = ?
+                   OR tg_id = ?
+                """, (uid, uid))
 
     row = cur.fetchone()
 
@@ -367,75 +361,24 @@ def show_user_html(uid):
 
     return escape(name or show_user(uid))
 
-# СОРТИРОВКА ДЛЯ СОСТАВА
-def sort_sostav(rows):
 
-    def sort_key(row):
-        tg_id, username, first_name, name, nick, game_id = row
-        value = (nick or name or username or "").strip()
+def display_user(username, tg_id, name):
+    if tg_id:
+        return (
+            f'<a href="tg://user?id={tg_id}">'
+            f'{name}'
+            f'</a>'
+        )
 
-        if not value:
-            return (9, "")
+    if username:
+        return f"@{username}"
 
-        pos = value.find("ｙ")
+    return name
 
-        if pos != -1 and pos + 1 < len(value):
-            ch = value[pos + 1]
 
-            if (
-                ("a" <= ch.lower() <= "z")
-                or
-                ("а" <= ch.lower() <= "я")
-            ):
-                return (0, ch.lower(), value.lower())
-
-            return (1, value.lower())
-
-        return (2, value.lower())
-
-    return sorted(rows, key=sort_key)
-
-# ПРОВЕРКА АДМИН ИЛИ НЕТ
-async def is_admin(update: Update):
-    admins = await update.effective_chat.get_administrators()
-    return any(a.user.id == update.effective_user.id for a in admins)
-
-def add_v(uid, t, r, mod):
-    cur.execute(
-        "INSERT INTO violations(user_id,type,reason,created_at,moderator) VALUES (?,?,?,?,?)",
-        (uid, t, r, datetime.now().isoformat(), mod)
-    )
-    conn.commit()
-
-def get(uid, t):
-    cur.execute(
-        "SELECT id, reason FROM violations WHERE user_id=? AND type=? ORDER BY id ASC",
-        (uid, t)
-    )
-    return cur.fetchall()
-
-def get_full(uid, t):
-    cur.execute(
-        """
-        SELECT id, reason, created_at
-        FROM violations
-        WHERE user_id=? AND type=?
-        ORDER BY id ASC
-        """,
-        (uid, t)
-    )
-    return cur.fetchall()
-
-def delete_by_id(i):
-    cur.execute("DELETE FROM violations WHERE id=?", (i,))
-    conn.commit()
-
-def delete_all(uid, t):
-    cur.execute("DELETE FROM violations WHERE user_id=? AND type=?", (uid, t))
-    conn.commit()
+# SORT
 
 def sort_users(users):
-
     def sort_key(user):
 
         tg_id, username, first_name, name = user
@@ -450,9 +393,9 @@ def sort_users(users):
             ch = name[pos + 1]
 
             if (
-                ("a" <= ch.lower() <= "z")
-                or
-                ("а" <= ch.lower() <= "я")
+                    ("a" <= ch.lower() <= "z")
+                    or
+                    ("а" <= ch.lower() <= "я")
             ):
                 return (
                     0,
@@ -475,47 +418,103 @@ def sort_users(users):
         key=sort_key
     )
 
-# GET TARGET
+
+def sort_sostav(rows):
+    def sort_key(row):
+        tg_id, username, first_name, name, nick, game_id = row
+        value = (nick or name or username or "").strip()
+
+        if not value:
+            return (9, "")
+
+        pos = value.find("ｙ")
+
+        if pos != -1 and pos + 1 < len(value):
+            ch = value[pos + 1]
+
+            if (
+                    ("a" <= ch.lower() <= "z")
+                    or
+                    ("а" <= ch.lower() <= "я")
+            ):
+                return (0, ch.lower(), value.lower())
+
+            return (1, value.lower())
+
+        return (2, value.lower())
+
+    return sorted(rows, key=sort_key)
+
+
+# ADMIN
+
+async def is_admin(update: Update):
+    admins = await update.effective_chat.get_administrators()
+    return any(a.user.id == update.effective_user.id for a in admins)
+
+
+# TARGET
 
 def get_target(update, context):
-
     if update.message.reply_to_message:
-
         user = update.message.reply_to_message.from_user
 
         return (
-            user.username
-            or str(user.id)
+                user.username
+                or str(user.id)
         )
 
     if context.args:
-
         return context.args[0].replace("@", "")
 
     return None
 
-# DISPLAY USER
 
-def display_user(username, tg_id, name):
+# VIOLATIONS
 
-    if tg_id:
+def add_v(uid, t, r, mod):
+    cur.execute(
+        "INSERT INTO violations(user_id,type,reason,created_at,moderator) VALUES (?,?,?,?,?)",
+        (uid, t, r, datetime.now().isoformat(), mod)
+    )
+    conn.commit()
 
-        return (
-            f'<a href="tg://user?id={tg_id}">'
-            f'{name}'
-            f'</a>'
-        )
 
-    if username:
+def get(uid, t):
+    cur.execute(
+        "SELECT id, reason FROM violations WHERE user_id=? AND type=? ORDER BY id ASC",
+        (uid, t)
+    )
+    return cur.fetchall()
 
-        return f"@{username}"
 
-    return name
+def get_full(uid, t):
+    cur.execute(
+        """
+        SELECT id, reason, created_at
+        FROM violations
+        WHERE user_id = ?
+          AND type = ?
+        ORDER BY id ASC
+        """,
+        (uid, t)
+    )
+    return cur.fetchall()
 
-# REMINDER WORKER
+
+def delete_by_id(i):
+    cur.execute("DELETE FROM violations WHERE id=?", (i,))
+    conn.commit()
+
+
+def delete_all(uid, t):
+    cur.execute("DELETE FROM violations WHERE user_id=? AND type=?", (uid, t))
+    conn.commit()
+
+
+# REMINDERS
 
 async def reminder_worker(app):
-
     while True:
 
         try:
@@ -527,15 +526,11 @@ async def reminder_worker(app):
             current_weekday = now.weekday()
 
             cur.execute("""
-                SELECT
-                    id,
-                    chat_id,
-                    period,
-                    time,
-                    text,
-                    last_sent
-                FROM reminders
-            """)
+                        SELECT id,
+                               chat_id,
+                               period, time, text, last_sent
+                        FROM reminders
+                        """)
 
             rows = cur.fetchall()
 
@@ -572,13 +567,13 @@ async def reminder_worker(app):
                 )
 
                 cur.execute("""
-                    UPDATE reminders
-                    SET last_sent=?
-                    WHERE id=?
-                """, (
-                    current_date,
-                    rid
-                ))
+                            UPDATE reminders
+                            SET last_sent=?
+                            WHERE id = ?
+                            """, (
+                                current_date,
+                                rid
+                            ))
 
                 conn.commit()
 
@@ -587,10 +582,10 @@ async def reminder_worker(app):
 
         await asyncio.sleep(30)
 
-# ---------------- ОВЧАРКА ----------------
+
+# SECURITY
 
 def german_shepherd_guard():
-
     required = [
         "get_target",
         "show_user_html",
@@ -614,11 +609,8 @@ def german_shepherd_guard():
         for item in missing:
             print(f"🚨 {item}")
 
-    else:
 
-        print(
-            "🐕 Всё на месте, хозяин."
-        )
+german_shepherd_guard()
 
 # ---------------- FORMAT ----------------
 
@@ -697,17 +689,6 @@ async def check_target(update, uid):
         return False
 
     return True
-
-# REMINDER DAYS
-DAYS = {
-    "понедельник": 0,
-    "вторник": 1,
-    "среда": 2,
-    "четверг": 3,
-    "пятница": 4,
-    "суббота": 5,
-    "воскресенье": 6
-}
 
 # ---------------- TEXT COMMANDS ----------------
 
