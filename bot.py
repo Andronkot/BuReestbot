@@ -122,6 +122,114 @@ REMINDER_DAYS = {
 }
 
 
+# ---------------- SELF CHECK ----------------
+
+def self_check(app):
+
+    errors = []
+
+    # TOKEN
+
+    if not TOKEN:
+        errors.append("TOKEN отсутствует")
+
+    # HELPERS
+
+    required_helpers = [
+        "get_target",
+        "show_user_html",
+        "sort_users",
+        "sort_sostav",
+        "user_exists",
+        "sync_user"
+    ]
+
+    for helper in required_helpers:
+
+        if helper not in globals():
+
+            errors.append(
+                f"Helper {helper} не найден"
+            )
+
+    # TABLES
+
+    try:
+
+        cur.execute("""
+            SELECT name
+            FROM sqlite_master
+            WHERE type='table'
+        """)
+
+        tables = {
+            row[0]
+            for row in cur.fetchall()
+        }
+
+        required_tables = {
+            "users",
+            "violations",
+            "settings",
+            "reminders"
+        }
+
+        for table in required_tables:
+
+            if table not in tables:
+
+                errors.append(
+                    f"Таблица {table} отсутствует"
+                )
+
+    except Exception as e:
+
+        errors.append(
+            f"Ошибка БД: {e}"
+        )
+
+    # COMMANDS
+
+    required_commands = [
+        "add",
+        "adme",
+        "pred",
+        "proeb",
+        "strong",
+        "ree",
+        "reestr",
+        "reminder"
+    ]
+
+    for cmd in required_commands:
+
+        if cmd not in globals():
+
+            errors.append(
+                f"Команда {cmd} не найдена"
+            )
+
+    # RESULT
+
+    if errors:
+
+        print("\n❌ SELF CHECK FAILED\n")
+
+        for err in errors:
+
+            print(f"🚨 {err}")
+
+        print()
+
+    else:
+
+        print("✅ TOKEN исправен")
+        print("✅ База данных подключена")
+        print("✅ Таблицы проверены")
+        print("✅ Хелперы найдены")
+        print("✅ Команды найдены")
+        print("🤖 Бот полностью готов к работе")
+
 # ---------------- HELPERS ----------------
 
 # USERS
@@ -2669,4 +2777,7 @@ async def on_startup(app):
     asyncio.create_task(reminder_worker(app))
 
 app.post_init = on_startup
+
+self_check(app)
+
 app.run_polling()
