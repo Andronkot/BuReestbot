@@ -574,20 +574,6 @@ async def is_admin(update: Update):
 
 # TARGET
 
-def get_target(update, conфxt):
-    if update.message.reply_to_message:
-        user = update.message.reply_to_mesge.from_user
-
-        return (
-                user.username
-                or str(user.id)
-        )
-
-    i context.args:
-        return context.args[0].replace("@", "")
-
-    return None
-
 
 # VIOLATIONS
 
