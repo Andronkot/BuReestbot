@@ -2193,12 +2193,26 @@ async def reminders(update: Update, context: ContextTypes.DEFAULT_TYPE):
     rows = cur.fetchall()
 
     if not rows:
+
         await update.message.reply_text(
-            "📭 Напоминалок нет."
+            """
+📭 Напоминалок нет.
+
+<code>Напоминалка пятница 12:00</code> - ➕ Создать напоминалку
+""",
+            parse_mode="HTML"
         )
+
         return
 
-    text = "<b>⏰ НАПОМИНАЛКИ</b>\n\n"
+    text = """
+<b>⏰ НАПОМИНАЛКИ</b>
+
+<code>Напоминалка пятница 12:00</code> - ➕ Создать напоминалку
+
+--------------------------------
+
+"""
 
     for rid, period, time_str, reminder_text in rows:
 
@@ -2210,9 +2224,18 @@ async def reminders(update: Update, context: ContextTypes.DEFAULT_TYPE):
         text += (
             f"🆔 {rid}\n"
             f"📅 {period}\n"
-            f"⏰ {time_str}\n\n"
+            f"⏰ {time_str}\n"
             f"💬 {short_text}\n\n"
         )
+
+    text += """
+--------------------------------
+
+<code>Изменить нап ID</code> - ✏️ Изменить текст
+<code>Период нап ID период</code> - 📅 Изменить период
+<code>Время нап ID время</code> - ⏰ Изменить время
+<code>Удалить нап ID</code> - 🗑️ Удалить напоминалку
+"""
 
     await update.message.reply_text(
         text,
@@ -2587,40 +2610,50 @@ async def setting(update: Update, context: ContextTypes.DEFAULT_TYPE):
     f"Автоприписка: {get_setting('autopripiska')}\n"
 
     text = f"""<b>⚙️ НАСТРОЙКИ ⚙️</b>
---------------------------------
+    --------------------------------
 
-<b>📋 Отображение в списках</b>
-<i>Релист • Реестр</i>
+    <b>📋 Отображение в списках</b>
+    <i>Релист • Реестр</i>
 
-{os1}<code>1️⃣ Username</code>
-『乃ｙStarfly | @Bystarfly
+    {os1}<code>1️⃣ Username</code>
+    『乃ｙStarfly | @Bystarfly
 
-{os2}<code>2️⃣ Имя Telegram</code>
-『乃ｙStarfly | Ваня
+    {os2}<code>2️⃣ Имя Telegram</code>
+    『乃ｙStarfly | Ваня
 
-{os3}<code>3️⃣ Ник реестра</code>
-『乃ｙStarfly | 『乃ｙStarfly
+    {os3}<code>3️⃣ Ник реестра</code>
+    『乃ｙStarfly | 『乃ｙStarfly
 
-✍️ Изменить:
-Сет ос [Номер]
+    ✍️ Изменить:
+    Сет ос [Номер]
 
---------------------------------
+    --------------------------------
 
-<b>🔗 Отображение в командах</b>
-<i>Пред • Проеб • Мур • Рее</i>
+    <b>🔗 Отображение в командах</b>
+    <i>Пред • Проеб • Мур • Рее</i>
 
-{ok1}<code>1️⃣ Username</code>
-❗@Bystarfly получает пред
+    {ok1}<code>1️⃣ Username</code>
+    ❗@Bystarfly получает пред
 
-{ok2}<code>2️⃣ Имя Telegram</code>
-❗Ваня получает пред
+    {ok2}<code>2️⃣ Имя Telegram</code>
+    ❗Ваня получает пред
 
-{ok3}<code>3️⃣ Ник реестра</code>
-❗『乃ｙStarfly получает пред
+    {ok3}<code>3️⃣ Ник реестра</code>
+    ❗『乃ｙStarfly получает пред
 
-✍️ Изменить:
-Сет ок [Номер]
-"""
+    ✍️ Изменить:
+    Сет ок [Номер]
+
+    --------------------------------
+
+    <b>📎 Автоприписка</b>
+    <i>Автоматический ответ на слово "приписка"</i>
+
+    {"🟢 <code>ВКЛ</code>" if get_setting("autopripiska") == "он" else "⚫ <code>ВЫКЛ</code>"}
+
+    ✍️ Изменить:
+    Сет ап [он/оф]
+    """
 
     await update.message.reply_text(
         text,
@@ -2843,6 +2876,8 @@ app.add_handler(
         text_commands
     )
 )
+
+app.add_handler(CommandHandler("comm", comm))
 
 async def on_startup(app):
     asyncio.create_task(reminder_worker(app))
