@@ -574,16 +574,16 @@ async def is_admin(update: Update):
 
 # TARGET
 
-def get_target(update, context):
+def get_target(update, conфxt):
     if update.message.reply_to_message:
-        user = update.message.reply_to_message.from_user
+        user = update.message.reply_to_mesge.from_user
 
         return (
                 user.username
                 or str(user.id)
         )
 
-    if context.args:
+    i context.args:
         return context.args[0].replace("@", "")
 
     return None
