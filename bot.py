@@ -385,6 +385,10 @@ def get_setting(key):
         set_setting("ok", "username")
         return "username"
 
+    if key == "autopripiska":
+        set_setting("autopripiska", "он")
+        return "он"
+
     return None
 
 
@@ -1107,6 +1111,25 @@ async def text_commands(update, context: ContextTypes.DEFAULT_TYPE):
 
         return await backup(update, context)
 
+    # АВТОПРИПИСКА
+
+    if get_setting("autopripiska") == "on":
+
+        trigger_words = [
+            "приписка",
+            "преписка",
+            "преписку",
+            "приписку",
+            "преписку",
+            "приписки",
+            "преписки"
+        ]
+
+        msg_text = text.lower()
+
+        if any(word in msg_text for word in trigger_words):
+            return await pripiska(update, context)
+
 # ---------------- COMMANDS ----------------
 
 # ---------------- PLUS NICK ----------------
@@ -1779,26 +1802,40 @@ async def myr(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
 
     if not user_exists(uid):
-        await update.message.reply_text(
-            "Тебя нету в базе. \nИди нахуй !"
+
+        msg = await update.message.reply_text(
+            "Тебя нету в базе.\nИди нахуй! 😹"
         )
 
         await asyncio.sleep(2)
 
-        await update.message.reply_text(
-            "Тебя нету в базе. \nДобавь себя: Адми Ник"
+        await msg.edit_text(
+            "Тебя нету в базе.\nДобавь себя: Адми Ник "
         )
 
         return
+
+    # ПАСХАЛКА
+
+    await update.message.reply_text(
+        "Мяу блять 😹"
+    )
 
     warns = get_full(uid, "warn")
     proebs = get_full(uid, "proeb")
 
     if not warns and not proebs:
-        await update.message.reply_text("Замечания отсутствуют 🤗")
+
+        await update.message.reply_text(
+            "Замечания отсутствуют 🤗"
+        )
+
         return
 
-    text = f"<b>❕ РЕЕСТР ПОЛЬЗОВАТЕЛЯ</b>\n\n👤 {show_user_html(uid)}\n\n"
+    text = (
+        f"<b>❕ РЕЕСТР ПОЛЬЗОВАТЕЛЯ</b>\n\n"
+        f"👤 {show_user_html(uid)}\n\n"
+    )
 
     if proebs:
         text += fmt_proeb_full(proebs)
@@ -2502,6 +2539,25 @@ async def set_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "✅ Настройки изменены"
     )
 
+    if key == "ап":
+
+        if value not in ["он", "оф"]:
+            await update.message.reply_text(
+                "❌ Используй:\nСет ап он\nСет ап оф"
+            )
+            return
+
+        set_setting(
+            "autopripiska",
+            value
+        )
+
+        await update.message.reply_text(
+            f"✅ Автоприписка: {value}"
+        )
+
+        return
+
 # ---------------- SETTING ----------------
 
 async def setting(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -2516,6 +2572,8 @@ async def setting(update: Update, context: ContextTypes.DEFAULT_TYPE):
     ok1 = "➤ " if ok_mode == "username" else ""
     ok2 = "➤ " if ok_mode == "firstname" else ""
     ok3 = "➤ " if ok_mode == "reestr" else ""
+
+    f"Автоприписка: {get_setting('autopripiska')}\n"
 
     text = f"""<b>⚙️ НАСТРОЙКИ ⚙️</b>
 --------------------------------
@@ -2686,6 +2744,8 @@ async def comm(update: Update, context: ContextTypes.DEFAULT_TYPE):
 <code>Сет ок [1-3]</code>
 Отображение в командах
 
+<code>Сет ап он/оф</code>
+Вкл/выкл автоприписка
 --------------------------------
 
 <b>📖 Прочее</b>
