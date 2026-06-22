@@ -1113,7 +1113,7 @@ async def text_commands(update, context: ContextTypes.DEFAULT_TYPE):
 
     # АВТОПРИПИСКА
 
-    if get_setting("autopripiska") == "on":
+    if get_setting("autopripiska") == "он":
 
         trigger_words = [
             "приписка",
@@ -1122,7 +1122,10 @@ async def text_commands(update, context: ContextTypes.DEFAULT_TYPE):
             "приписку",
             "преписку",
             "приписки",
-            "преписки"
+            "преписки",
+            "перед ником",
+            "для ника",
+            "в ник"
         ]
 
         msg_text = text.lower()
@@ -2498,8 +2501,6 @@ async def time_reminder(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"⏰ Время напоминалки #{rid} изменено на: {new_time}"
     )
 
-# ---------------- SET ----------------
-
 async def set_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if not await is_admin(update):
@@ -2509,7 +2510,7 @@ async def set_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     section = context.args[0].lower()
-    value = context.args[1]
+    value = context.args[1].lower()
 
     modes = {
         "1": "username",
@@ -2517,29 +2518,9 @@ async def set_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "3": "reestr"
     }
 
-    if value not in modes:
-        return
+    # АВТОПРИПИСКА
 
-    if section == "ос":
-        set_setting(
-            "os",
-            modes[value]
-        )
-
-    elif section == "ок":
-        set_setting(
-            "ok",
-            modes[value]
-        )
-
-    else:
-        return
-
-    await update.message.reply_text(
-        "✅ Настройки изменены"
-    )
-
-    if key == "ап":
+    if section == "ап":
 
         if value not in ["он", "оф"]:
             await update.message.reply_text(
@@ -2558,6 +2539,36 @@ async def set_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         return
 
+    # ОС
+
+    if section == "ос":
+
+        if value not in modes:
+            return
+
+        set_setting(
+            "os",
+            modes[value]
+        )
+
+    # ОК
+
+    elif section == "ок":
+
+        if value not in modes:
+            return
+
+        set_setting(
+            "ok",
+            modes[value]
+        )
+
+    else:
+        return
+
+    await update.message.reply_text(
+        "✅ Настройки изменены"
+    )
 # ---------------- SETTING ----------------
 
 async def setting(update: Update, context: ContextTypes.DEFAULT_TYPE):
