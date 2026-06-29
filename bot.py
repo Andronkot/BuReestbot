@@ -887,67 +887,65 @@ async def delete_now_callback(update, context):
         "✅ Пользователь удалён из реестра."
     )
 
-async def left_chat(update, context):
+# ---------------- CHAT MEMBER ----------------
+
+async def chat_member_event(update, context):
 
     member = update.chat_member
 
-    if member.new_chat_member.status not in [
-        "left",
-        "kicked"
-    ]:
-        return
-
-    user = member.new_chat_member.user
-
-    uid = str(user.id)
-
-    if not _user_row(uid):
-        return
-
-    keyboard = InlineKeyboardMarkup([
-        [
-            InlineKeyboardButton(
-                "🗑️ Удалить",
-                callback_data=f"delnow:{uid}"
-            )
-        ]
-    ])
-
-    msg = await context.bot.send_message(
-        chat_id=update.effective_chat.id,
-        text=(
-            f"👤 {show_user_html(uid)} покинул чат.\n\n"
-            "🕒 Через 3 дня запись будет удалена автоматически."
-        ),
-        reply_markup=keyboard,
-        parse_mode="HTML"
-    )
-
-    pending_delete[uid] = asyncio.create_task(
-        delete_after_delay(
-            uid,
-            msg
-        )
-    )
-
-async def join_chat(update, context):
-
-    member = update.chat_member
-
-    if member.new_chat_member.status not in [
-        "member",
-        "administrator",
-        "creator"
-    ]:
-        return
+    old = member.old_chat_member.status
+    new = member.new_chat_member.status
 
     uid = str(member.new_chat_member.user.id)
 
-    task = pending_delete.pop(uid, None)
+    # ---------- ВЫШЕЛ ----------
 
-    if task:
-        task.cancel()
+    if old in ["member", "administrator", "creator"] and new in ["left", "kicked"]:
 
+        if not _user_row(uid):
+            return
+
+        keyboard = InlineKeyboardMarkup([
+            [
+                InlineKeyboardButton(
+                    "🗑️ Удалить",
+                    callback_data=f"delnow:{uid}"
+                )
+            ]
+        ])
+
+        msg = await context.bot.send_message(
+            chat_id=update.effective_chat.id,
+            text=(
+                f"👤 {show_user_html(uid)} покинул чат.\n\n"
+                "🕒 Через 3 дня пользователь будет удалён автоматически."
+            ),
+            reply_markup=keyboard,
+            parse_mode="HTML"
+        )
+
+        task = pending_delete.pop(uid, None)
+
+        if task:
+            task.cancel()
+
+        pending_delete[uid] = asyncio.create_task(
+            delete_after_delay(
+                uid,
+                msg
+            )
+        )
+
+        return
+
+    # ---------- ВЕРНУЛСЯ ----------
+
+    if old in ["left", "kicked"] and new in ["member", "administrator", "creator"]:
+
+        task = pending_delete.pop(uid, None)
+
+        if task:
+            task.cancel()
 
 # ---------------- TEXT COMMANDS ----------------
 
@@ -3068,14 +3066,7 @@ app.add_handler(
 
 app.add_handler(
     ChatMemberHandler(
-        left_chat,
-        ChatMemberHandler.CHAT_MEMBER
-    )
-)
-
-app.add_handler(
-    ChatMemberHandler(
-        join_chat,
+        chat_member_event,
         ChatMemberHandler.CHAT_MEMBER
     )
 )
