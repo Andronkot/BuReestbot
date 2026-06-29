@@ -2924,7 +2924,7 @@ async def backup(update, context):
 app = ApplicationBuilder().token(TOKEN).build()
 
 app.add_handler(
-    MessageHandle
+    MessageHandler(
         filters.TEXT & ~filters.COMMAND,
         text_commands
     )
