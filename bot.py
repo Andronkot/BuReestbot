@@ -1253,11 +1253,15 @@ async def plus_id(update, context):
         )
         return
 
-    self_ref = update.effective_user.username or str(update.effective_user.id)
+    self_ref = (
+        update.effective_user.username
+        or str(update.effective_user.id)
+    )
 
     target_user = None
 
     if update.message.reply_to_message:
+
         target_user = update.message.reply_to_message.from_user
         target_ref = str(target_user.id)
         id_parts = args
@@ -1265,10 +1269,12 @@ async def plus_id(update, context):
     elif await is_admin(update) and len(args) >= 2 and (
         args[0].startswith("@") or args[0].isdigit()
     ):
+
         target_ref = args[0].lstrip("@").strip()
         id_parts = args[1:]
 
     else:
+
         target_ref = self_ref
         id_parts = args
 
@@ -1277,6 +1283,20 @@ async def plus_id(update, context):
     if not gid:
         await update.message.reply_text(
             "❌ Укажи айди."
+        )
+        return
+
+    # ПРОВЕРКА ID
+
+    if (
+        not gid.isdigit()
+        or
+        len(gid) < 8
+        or
+        len(gid) > 11
+    ):
+        await update.message.reply_text(
+            "❌ Указано неправильное ID"
         )
         return
 
@@ -1290,26 +1310,38 @@ async def plus_id(update, context):
         return
 
     if row:
+
         cur.execute(
             """
             UPDATE users
             SET game_id=?
             WHERE tg_id=? OR username=?
             """,
-            (gid, target_ref, target_ref)
+            (
+                gid,
+                target_ref,
+                target_ref
+            )
         )
+
     else:
+
         if target_user:
+
             tg_id = str(target_user.id)
             username = target_user.username or ""
             first_name = target_user.first_name or ""
             name = target_user.first_name or target_user.username or ""
+
         elif target_ref.isdigit():
+
             tg_id = target_ref
             username = ""
             first_name = ""
             name = ""
+
         else:
+
             tg_id = str(update.effective_user.id)
             username = update.effective_user.username or ""
             first_name = update.effective_user.first_name or ""
@@ -1498,27 +1530,49 @@ async def add(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # ---------------- DEL ----------------
 
 async def delete(update: Update, context: ContextTypes.DEFAULT_TYPE):
+
     if not await is_admin(update):
         return
 
-    if not context.args:
+    target = get_target(update, context)
+
+    if not target:
+        await update.message.reply_text(
+            "👤 Укажи пользователя или ответь на его сообщение."
+        )
         return
 
-    uid = clean(context.args[0])
-    if not user_exists(uid):
+    row = _user_row(target)
+
+    if not row:
         await update.message.reply_text(
             "❌ Пользователь не найден в реестре"
         )
         return
 
+    tg_id = row[0]
+    username = row[1]
+
     cur.execute(
-        "DELETE FROM users WHERE username=?",
-        (uid,)
+        """
+        DELETE FROM users
+        WHERE tg_id=? OR username=?
+        """,
+        (
+            tg_id,
+            username
+        )
     )
 
     cur.execute(
-        "DELETE FROM violations WHERE user_id=?",
-        (uid,)
+        """
+        DELETE FROM violations
+        WHERE user_id=? OR user_id=?
+        """,
+        (
+            tg_id,
+            username
+        )
     )
 
     conn.commit()
@@ -1527,7 +1581,6 @@ async def delete(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "<b>❌ Пользователь удалён</b>",
         parse_mode="HTML"
     )
-
 
 # ---------------- PRED ----------------
 
@@ -2871,13 +2924,11 @@ async def backup(update, context):
 app = ApplicationBuilder().token(TOKEN).build()
 
 app.add_handler(
-    MessageHandler(
+    MessageHandle
         filters.TEXT & ~filters.COMMAND,
         text_commands
     )
 )
-
-app.add_handler(CommandHandler("comm", comm))
 
 async def on_startup(app):
     asyncio.create_task(reminder_worker(app))
