@@ -230,6 +230,10 @@ def self_check(app):
         print("✅ Команды найдены")
         print("🤖 Бот полностью готов к работе")
 
+# AUTO DELETE TASKS
+
+pending_delete = {}
+
 # ---------------- HELPERS ----------------
 
 # USERS
@@ -812,6 +816,135 @@ async def check_target(update, uid):
         return False
 
     return True
+
+# ---------------- AUTO DELETE ----------------
+
+async def delete_user(uid):
+
+    row = _user_row(uid)
+
+    if not row:
+        return
+
+    tg_id = row[0]
+    username = row[1]
+
+    cur.execute("""
+        DELETE FROM users
+        WHERE tg_id=? OR username=?
+    """, (
+        tg_id,
+        username
+    ))
+
+    cur.execute("""
+        DELETE FROM violations
+        WHERE user_id=? OR user_id=?
+    """, (
+        tg_id,
+        username
+    ))
+
+    conn.commit()
+
+async def delete_after_delay(uid, message):
+
+    try:
+
+        await asyncio.sleep(60 * 60 * 24 * 3)
+
+        await delete_user(uid)
+
+        try:
+            await message.edit_text(
+                "🗑️ Пользователь автоматически удалён из реестра."
+            )
+        except:
+            pass
+
+    except asyncio.CancelledError:
+        pass
+
+async def delete_now_callback(update, context):
+
+    query = update.callback_query
+
+    await query.answer()
+
+    uid = query.data.split(":")[1]
+
+    task = pending_delete.pop(uid, None)
+
+    if task:
+        task.cancel()
+
+    await delete_user(uid)
+
+    await query.edit_message_text(
+        "✅ Пользователь удалён из реестра."
+    )
+
+async def left_chat(update, context):
+
+    member = update.chat_member
+
+    if member.new_chat_member.status not in [
+        "left",
+        "kicked"
+    ]:
+        return
+
+    user = member.new_chat_member.user
+
+    uid = str(user.id)
+
+    if not _user_row(uid):
+        return
+
+    keyboard = InlineKeyboardMarkup([
+        [
+            InlineKeyboardButton(
+                "🗑️ Удалить",
+                callback_data=f"delnow:{uid}"
+            )
+        ]
+    ])
+
+    msg = await context.bot.send_message(
+        chat_id=update.effective_chat.id,
+        text=(
+            f"👤 {show_user_html(uid)} покинул чат.\n\n"
+            "🕒 Через 3 дня запись будет удалена автоматически."
+        ),
+        reply_markup=keyboard,
+        parse_mode="HTML"
+    )
+
+    pending_delete[uid] = asyncio.create_task(
+        delete_after_delay(
+            uid,
+            msg
+        )
+    )
+
+async def join_chat(update, context):
+
+    member = update.chat_member
+
+    if member.new_chat_member.status not in [
+        "member",
+        "administrator",
+        "creator"
+    ]:
+        return
+
+    uid = str(member.new_chat_member.user.id)
+
+    task = pending_delete.pop(uid, None)
+
+    if task:
+        task.cancel()
+
 
 # ---------------- TEXT COMMANDS ----------------
 
@@ -2927,6 +3060,27 @@ app.add_handler(
     MessageHandler(
         filters.TEXT & ~filters.COMMAND,
         text_commands
+    )
+)
+
+app.add_handler(
+    ChatMemberHandler(
+        left_chat,
+        ChatMemberHandler.CHAT_MEMBER
+    )
+)
+
+app.add_handler(
+    ChatMemberHandler(
+        join_chat,
+        ChatMemberHandler.CHAT_MEMBER
+    )
+)
+
+app.add_handler(
+    CallbackQueryHandler(
+        delete_now_callback,
+        pattern="^delnow:"
     )
 )
 
