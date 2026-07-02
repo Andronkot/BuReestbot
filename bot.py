@@ -1880,6 +1880,10 @@ async def myr(update: Update, context: ContextTypes.DEFAULT_TYPE):
     warns = get_full(uid, "warn")
     proebs = get_full(uid, "proeb")
 
+    print("UID =", uid)
+    print("WARNS =", warns)
+    print("PROEBS =", proebs)
+
     if not warns and not proebs:
 
         await update.message.reply_text(
