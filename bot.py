@@ -1594,6 +1594,7 @@ async def delete(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # ---------------- PRED ----------------
 
 async def pred(update: Update, context: ContextTypes.DEFAULT_TYPE):
+
     if not await is_admin(update):
         return
 
@@ -1603,9 +1604,18 @@ async def pred(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     if update.message.reply_to_message:
-        reason = " ".join(context.args)
+        reason = " ".join(context.args).strip()
     else:
-        reason = " ".join(context.args[1:]) if len(context.args) > 1 else ""
+        reason = " ".join(context.args[1:]).strip() if len(context.args) > 1 else ""
+
+    if not reason:
+        await update.message.reply_text(
+            "❌ Укажи причину.\n\n"
+            "Пример:\n"
+            "<code>Пред Флуд</code>",
+            parse_mode="HTML"
+        )
+        return
 
     mod = (
         f"@{update.effective_user.username}"
@@ -1617,10 +1627,8 @@ async def pred(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     text = f"""❗{show_user_html(uid)} получает ⚠️ Предупреждение
 ⏳Будет снято когда исправишься
-👺Модератор: {mod}"""
-
-    if reason:
-        text += f"\n💬Причина: {reason}"
+👺Модератор: {mod}
+💬Причина: {reason}"""
 
     await update.message.reply_text(
         text,
@@ -1630,6 +1638,7 @@ async def pred(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # ---------------- PROEB ----------------
 
 async def proeb(update: Update, context: ContextTypes.DEFAULT_TYPE):
+
     if not await is_admin(update):
         return
 
@@ -1639,11 +1648,24 @@ async def proeb(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     if update.message.reply_to_message:
-        reason = " ".join(context.args)
+        reason = " ".join(context.args).strip()
     else:
-        reason = " ".join(context.args[1:]) if len(context.args) > 1 else ""
+        reason = " ".join(context.args[1:]).strip() if len(context.args) > 1 else ""
 
-    mod = f"@{update.effective_user.username}" if update.effective_user.username else str(update.effective_user.id)
+    if not reason:
+        await update.message.reply_text(
+            "❌ Укажи причину.\n\n"
+            "Пример:\n"
+            "<code>Проеб Афк</code>",
+            parse_mode="HTML"
+        )
+        return
+
+    mod = (
+        f"@{update.effective_user.username}"
+        if update.effective_user.username
+        else str(update.effective_user.id)
+    )
 
     add_v(uid, "proeb", reason, mod)
 
@@ -1651,10 +1673,8 @@ async def proeb(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     text = f"""❗{show_user_html(uid)} получает ⛔ Проеб ({count}/3)
 ⏳Будет снято через 30 дней
-👺Модератор: {mod}"""
-
-    if reason:
-        text += f"\n💬Причина: {reason}"
+👺Модератор: {mod}
+💬Причина: {reason}"""
 
     await update.message.reply_text(
         text,
@@ -1662,8 +1682,9 @@ async def proeb(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
     if count >= 3:
-        await update.message.reply_text(f"🚨 {show_user(uid)} достиг максимального числа ⛔Проебов (3/3) !")
-
+        await update.message.reply_text(
+            f"🚨 {show_user(uid)} достиг максимального числа ⛔Проебов (3/3) !"
+        )
 
 # ---------------- UNPRED ----------------
 
