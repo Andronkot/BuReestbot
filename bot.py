@@ -592,6 +592,15 @@ def get_target(update, context):
 
     return None
 
+# CLEAN
+
+def clean(uid):
+
+    if not uid:
+        return uid
+
+    return uid.lstrip("@").strip()
+
 
 # VIOLATIONS
 
